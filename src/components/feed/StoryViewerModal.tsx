@@ -85,7 +85,7 @@ export const StoryViewerModal: React.FC = () => {
   if (!currentStory) return null;
 
   const handleNext = () => {
-    if (activeStoryIndex < stories.length - 1) {
+    if (activeStoryIndex !== null && activeStoryIndex < stories.length - 1) {
       setActiveStoryIndex(activeStoryIndex + 1);
     } else {
       setActiveStoryIndex(null);
@@ -93,7 +93,7 @@ export const StoryViewerModal: React.FC = () => {
   };
 
   const handlePrev = () => {
-    if (activeStoryIndex > 0) {
+    if (activeStoryIndex !== null && activeStoryIndex > 0) {
       setActiveStoryIndex(activeStoryIndex - 1);
     }
   };
@@ -193,7 +193,7 @@ export const StoryViewerModal: React.FC = () => {
                 className="h-full bg-white transition-all duration-100 ease-linear"
                 style={{
                   width:
-                    idx < activeStoryIndex
+                    activeStoryIndex !== null && idx < activeStoryIndex
                       ? '100%'
                       : idx === activeStoryIndex
                       ? `${progress}%`
