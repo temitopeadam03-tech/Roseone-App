@@ -1,2 +1,5 @@
-# Netlify SPA redirect rule: reroutes all routes to index.html with HTTP 200 for client-side deep linking
-/*    /index.html   200
+# Send API requests to the backend function first
+/api/*  /.netlify/functions/api/:splat  200!
+
+# Send all remaining routes to the React app
+/*  /index.html  200
