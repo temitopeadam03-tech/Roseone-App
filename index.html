@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RoseOne — Everything, Connected</title>
+    <meta name="description" content="RoseOne - Next-generation connected social platform featuring social feeds, stories, messaging, communities, video sharing, creator tools, AI assistance, and marketplace." />
+    <meta name="application-name" content="RoseOne" />
+    <meta name="apple-mobile-web-app-title" content="RoseOne" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#E91E8C" />
+    <meta name="msapplication-TileColor" content="#E91E8C" />
+
+    <!-- Favicons & Touch Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- OpenGraph & Social Cards -->
+    <meta property="og:title" content="RoseOne — Everything, Connected" />
+    <meta property="og:description" content="Next-generation connected social platform featuring social feeds, stories, messaging, communities, video sharing, creator tools, AI assistance, and marketplace." />
+    <meta property="og:site_name" content="RoseOne" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="RoseOne — Everything, Connected" />
+    <meta name="twitter:description" content="Next-generation connected social platform with a signature pink design system." />
+    <meta name="twitter:image" content="/pwa-512x512.png" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+      (function() {
+        try {
+          var raw = localStorage.getItem('rose_settings');
+          var accent = '#E91E8C';
+          var theme = 'light';
+          if (raw) {
+            var s = JSON.parse(raw);
+            if (s && s.appearance) {
+              if (s.appearance.accentColor) accent = s.appearance.accentColor;
+              if (s.appearance.theme) theme = s.appearance.theme;
+            }
+          }
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = theme === 'dark' || (theme === 'system' && prefersDark);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+
+          function hexToRgb(hex) {
+            var c = /^#[0-9a-f]{6}$/i.test(hex) ? hex.slice(1) : 'E91E8C';
+            return [parseInt(c.slice(0, 2), 16), parseInt(c.slice(2, 4), 16), parseInt(c.slice(4, 6), 16)];
+          }
+          function adjustColor(hex, factor) {
+            var rgb = hexToRgb(hex);
+            var res = rgb.map(function(v) {
+              if (factor < 0) return Math.round(v * (1 + factor));
+              return Math.round(v + (255 - v) * factor);
+            });
+            return '#' + res.map(function(v) { return Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0'); }).join('');
+          }
+          var rgb = hexToRgb(accent);
+          var lum = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+          var contrast = lum > 0.5 ? '#17131A' : '#FFFFFF';
+          var root = document.documentElement.style;
+          root.setProperty('--brand-pink', accent);
+          root.setProperty('--brand-accent', accent);
+          root.setProperty('--brand-accent-dark', adjustColor(accent, -0.25));
+          root.setProperty('--brand-accent-darker', adjustColor(accent, -0.4));
+          root.setProperty('--brand-accent-light', adjustColor(accent, 0.3));
+          root.setProperty('--brand-accent-pastel', adjustColor(accent, 0.75));
+          root.setProperty('--brand-accent-contrast', contrast);
+          root.setProperty('--brand-accent-rgb', rgb[0] + ', ' + rgb[1] + ', ' + rgb[2]);
+          root.setProperty('--brand-accent-soft', 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ', 0.16)');
+          root.setProperty('--brand-accent-subtle', 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ', 0.08)');
+          root.setProperty('--brand-accent-ring', 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ', 0.35)');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

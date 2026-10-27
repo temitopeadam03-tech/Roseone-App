@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-pink: #E91E8C;
+    --brand-deep-pink: #BE185D;
+    --brand-blush-pink: #FCE7F3;
+    --surface-light: #F5F5F7;
+    --surface-dark: #17131A;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(190, 24, 93, 0.2);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(190, 24, 93, 0.4);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(233, 30, 140, 0.25);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(233, 30, 140, 0.5);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* RoseOne user-selected accent theme */
+:root {
+  --brand-pink: #E91E8C;
+  --brand-accent: #E91E8C;
+  --brand-accent-rgb: 233, 30, 140;
+  --brand-accent-dark: #BE185D;
+  --brand-accent-darker: #9D174D;
+  --brand-accent-light: #FB7185;
+  --brand-accent-pastel: #FECDD3;
+  --brand-accent-contrast: #FFFFFF;
+  --brand-accent-soft: rgba(233, 30, 140, 0.16);
+  --brand-accent-subtle: rgba(233, 30, 140, 0.08);
+  --brand-accent-ring: rgba(233, 30, 140, 0.35);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Dynamic scrollbar thumb mapped to active accent */
+::-webkit-scrollbar-thumb {
+  background: var(--brand-accent-soft);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-accent-ring);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--brand-accent-soft);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-accent-ring);
+}
+
+/* App-wide dynamic theme accent overrides */
+/* Text colors */
+[class*="text-[#E91E8C]"]:not([class*="hover:text-[#E91E8C]"]),
+[class*="text-[#BE185D]"]:not([class*="hover:text-[#BE185D]"]) {
+  color: var(--brand-accent) !important;
+}
+
+[class*="hover:text-[#E91E8C]"]:hover {
+  color: var(--brand-accent) !important;
+}
+[class*="hover:text-[#BE185D]"]:hover {
+  color: var(--brand-accent-dark) !important;
+}
+
+/* Solid backgrounds */
+[class~="bg-[#E91E8C]"],
+[class*="bg-[#E91E8C]"]:not([class*="/"]):not([class*="hover:bg-[#E91E8C]"]) {
+  background-color: var(--brand-accent) !important;
+  color: var(--brand-accent-contrast) !important;
+}
+
+[class~="bg-[#BE185D]"],
+[class*="bg-[#BE185D]"]:not([class*="/"]):not([class*="hover:bg-[#BE185D]"]) {
+  background-color: var(--brand-accent-dark) !important;
+  color: var(--brand-accent-contrast) !important;
+}
+
+/* Hover solid backgrounds */
+[class*="hover:bg-[#E91E8C]"]:hover:not([class*="/"]) {
+  background-color: var(--brand-accent) !important;
+  color: var(--brand-accent-contrast) !important;
+}
+[class*="hover:bg-[#BE185D]"]:hover:not([class*="/"]) {
+  background-color: var(--brand-accent-dark) !important;
+  color: var(--brand-accent-contrast) !important;
+}
+
+/* Opacity background variants */
+[class*="bg-[#E91E8C]/5"], [class*="bg-[#BE185D]/5"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.05) !important; }
+[class*="bg-[#E91E8C]/10"], [class*="bg-[#BE185D]/10"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.10) !important; }
+[class*="bg-[#E91E8C]/15"], [class*="bg-[#BE185D]/15"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.15) !important; }
+[class*="bg-[#E91E8C]/20"], [class*="bg-[#BE185D]/20"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.20) !important; }
+[class*="bg-[#E91E8C]/25"], [class*="bg-[#BE185D]/25"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.25) !important; }
+[class*="bg-[#E91E8C]/30"], [class*="bg-[#BE185D]/30"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.30) !important; }
+[class*="bg-[#E91E8C]/40"], [class*="bg-[#BE185D]/40"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.40) !important; }
+[class*="bg-[#E91E8C]/50"], [class*="bg-[#BE185D]/50"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.50) !important; }
+[class*="bg-[#E91E8C]/80"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.80) !important; }
+[class*="bg-[#E91E8C]/90"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.90) !important; }
+
+/* Hover with opacity */
+[class*="hover:bg-[#BE185D]/10"]:hover, [class*="hover:bg-[#E91E8C]/10"]:hover { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.10) !important; }
+[class*="hover:bg-[#BE185D]/20"]:hover, [class*="hover:bg-[#E91E8C]/20"]:hover { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.20) !important; }
+[class*="hover:bg-[#BE185D]/25"]:hover, [class*="hover:bg-[#E91E8C]/25"]:hover { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.25) !important; }
+[class*="hover:bg-[#BE185D]/30"]:hover, [class*="hover:bg-[#E91E8C]/30"]:hover { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.30) !important; }
+
+/* Blush background */
+[class~="bg-[#FCE7F3]"],
+[class*="bg-[#FCE7F3]"]:not([class*="/"]):not([class*="hover:"]) {
+  background-color: var(--brand-accent-soft) !important;
+}
+[class*="bg-[#FCE7F3]/30"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.08) !important; }
+[class*="bg-[#FCE7F3]/40"] { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.12) !important; }
+[class*="hover:bg-[#FCE7F3]"]:hover:not([class*="/"]) { background-color: var(--brand-accent-soft) !important; }
+[class*="hover:bg-[#FCE7F3]/40"]:hover { background-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.15) !important; }
+
+[class~="text-[#FCE7F3]"] {
+  color: var(--brand-accent-pastel) !important;
+}
+
+/* Borders */
+[class*="border-[#E91E8C]"]:not([class*="/"]) { border-color: var(--brand-accent) !important; }
+[class*="border-[#BE185D]"]:not([class*="/"]) { border-color: var(--brand-accent-dark) !important; }
+[class*="border-[#E91E8C]/20"] { border-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.20) !important; }
+[class*="border-[#E91E8C]/30"] { border-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.30) !important; }
+[class*="border-[#E91E8C]/40"] { border-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.40) !important; }
+[class*="border-[#E91E8C]/50"] { border-color: rgba(var(--brand-accent-rgb, 233, 30, 140), 0.50) !important; }
+[class*="hover:border-[#E91E8C]"]:hover { border-color: var(--brand-accent) !important; }
+
+/* Rings */
+[class*="ring-[#E91E8C]"] { --tw-ring-color: var(--brand-accent) !important; }
+[class*="focus:ring-[#E91E8C]"]:focus { --tw-ring-color: var(--brand-accent) !important; }
+
+/* Fills & Accents */
+[class*="fill-[#E91E8C]"],
+[class*="fill-[#BE185D]"] {
+  fill: var(--brand-accent) !important;
+}
+[class*="accent-[#E91E8C]"] {
+  accent-color: var(--brand-accent) !important;
+}
+
+/* Gradients */
+[class*="from-[#BE185D]"] {
+  --tw-gradient-from: var(--brand-accent-dark) var(--tw-gradient-from-position) !important;
+}
+[class*="from-[#E91E8C]"] {
+  --tw-gradient-from: var(--brand-accent) var(--tw-gradient-from-position) !important;
+}
+[class*="via-[#E91E8C]"] {
+  --tw-gradient-via: var(--brand-accent) var(--tw-gradient-via-position) !important;
+}
+[class*="to-[#BE185D]"] {
+  --tw-gradient-to: var(--brand-accent-dark) var(--tw-gradient-to-position) !important;
+}
+[class*="to-[#E91E8C]"] {
+  --tw-gradient-to: var(--brand-accent) var(--tw-gradient-to-position) !important;
+}
+[class*="to-[#F472B6]"] {
+  --tw-gradient-to: var(--brand-accent-light) var(--tw-gradient-to-position) !important;
+}
+
+/* Shadows */
+[class*="shadow-[#E91E8C]"] {
+  --tw-shadow-color: var(--brand-accent-ring) !important;
+}
