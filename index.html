@@ -3,10 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RoseOne — Everything, Connected</title>
-    <meta name="description" content="RoseOne - Next-generation connected social platform featuring social feeds, stories, messaging, communities, video sharing, creator tools, AI assistance, and marketplace." />
-    <meta name="application-name" content="RoseOne" />
-    <meta name="apple-mobile-web-app-title" content="RoseOne" />
+    <title>Gistupp — Your World, Your People</title>
+    <meta name="description" content="Discover your circle, share stories and videos, join communities, message friends, and explore the Gistupp marketplace — everything connected in one social platform." />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://gistupp.online/" />
+    <meta name="application-name" content="Gistupp" />
+    <meta name="apple-mobile-web-app-title" content="Gistupp" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#E91E8C" />
     <meta name="msapplication-TileColor" content="#E91E8C" />
@@ -20,22 +22,51 @@
     <link rel="manifest" href="/site.webmanifest" />
 
     <!-- OpenGraph & Social Cards -->
-    <meta property="og:title" content="RoseOne — Everything, Connected" />
+    <meta property="og:title" content="Gistupp — Your World, Your People" />
     <meta property="og:description" content="Next-generation connected social platform featuring social feeds, stories, messaging, communities, video sharing, creator tools, AI assistance, and marketplace." />
-    <meta property="og:site_name" content="RoseOne" />
+    <meta property="og:site_name" content="Gistupp" />
+    <meta property="og:url" content="https://gistupp.online/" />
+    <meta property="og:locale" content="en_NG" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/pwa-512x512.png" />
+    <meta property="og:image" content="https://gistupp.online/pwa-512x512.png" />
+    <meta property="og:image:alt" content="Gistupp social platform logo" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="RoseOne — Everything, Connected" />
+    <meta name="twitter:title" content="Gistupp — Your World, Your People" />
     <meta name="twitter:description" content="Next-generation connected social platform with a signature pink design system." />
-    <meta name="twitter:image" content="/pwa-512x512.png" />
+    <meta name="twitter:image" content="https://gistupp.online/pwa-512x512.png" />
+    <meta name="twitter:image:alt" content="Gistupp social platform logo" />
 
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Gistupp",
+        "url": "https://gistupp.online/",
+        "logo": "https://gistupp.online/pwa-512x512.png",
+        "description": "A connected social platform for sharing stories and videos, messaging, communities, and marketplace discovery."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Gistupp",
+        "url": "https://gistupp.online/",
+        "inLanguage": "en-NG"
+      }
+    </script>
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
       (function() {
         try {
+          // Password-reset pages are utility pages, not search landing pages.
+          if (window.location.pathname === '/reset-password') {
+            var robots = document.querySelector('meta[name="robots"]');
+            if (robots) robots.setAttribute('content', 'noindex, nofollow');
+          }
           var raw = localStorage.getItem('rose_settings');
           var accent = '#E91E8C';
           var theme = 'light';

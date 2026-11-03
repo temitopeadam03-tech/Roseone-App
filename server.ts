@@ -32,7 +32,7 @@ async function createServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌸 RoseOne server running on http://0.0.0.0:${PORT} [${isProduction ? 'prod' : 'dev'}]`);
+    console.log(`🌸 Gistupp server running on http://0.0.0.0:${PORT} [${isProduction ? 'prod' : 'dev'}]`);
   });
 }
 

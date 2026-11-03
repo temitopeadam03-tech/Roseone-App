@@ -13,6 +13,7 @@ import {
   UserSettings,
   Comment,
   MarketplaceListing,
+  MarketplaceStore,
   ReportedItem,
   ReactionType,
 } from '../types';
@@ -31,6 +32,7 @@ export interface DatabaseSchema {
   communities: Community[];
   products: Product[];
   marketplaceListings: MarketplaceListing[];
+  marketplaceStores?: MarketplaceStore[];
   notifications: NotificationItem[];
   reportedItems: ReportedItem[];
   settings: Record<string, UserSettings>;
@@ -63,6 +65,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   communities: [],
   products: [],
   marketplaceListings: [],
+  marketplaceStores: [],
   notifications: [],
   reportedItems: [],
   settings: {},
@@ -120,6 +123,7 @@ const cleanLegacyDatabase = (source: DatabaseSchema): DatabaseSchema => {
   db.savedPosts = db.savedPosts || {};
   db.products = db.products || [];
   db.marketplaceListings = db.marketplaceListings || [];
+  db.marketplaceStores = db.marketplaceStores || [];
   db.notifications = (db.notifications || []).filter((item) => !removedUserIds.has(item.actor?.id));
   db.reportedItems = db.reportedItems || [];
   return db;
@@ -218,6 +222,28 @@ export class PersistentStorage {
 
   public getUserById(id: string): User | undefined {
     return this.db.users.find((u) => u.id === id);
+  }
+
+  /** Keep the legacy feature store's profile projection aligned with Supabase Auth. */
+  public upsertSupabaseUser(profile: User): User {
+    const existingIndex = this.db.users.findIndex((user) => user.id === profile.id);
+    if (existingIndex >= 0) {
+      const existing = this.db.users[existingIndex];
+      const updated: User = {
+        ...existing,
+        name: profile.name || existing.name,
+        handle: existing.handle || profile.handle,
+        avatar: existing.avatar || profile.avatar,
+        joinedDate: existing.joinedDate || profile.joinedDate,
+      };
+      this.db.users[existingIndex] = updated;
+      this.schedulePersist();
+      return updated;
+    }
+    this.db.users.push(profile);
+    this.db.settings[profile.id] = this.db.settings[profile.id] || INITIAL_SETTINGS;
+    this.schedulePersist();
+    return profile;
   }
 
   public updateProfile(userId: string, updates: Partial<User>): User {
@@ -1098,6 +1124,63 @@ export class PersistentStorage {
     return true;
   }
 
+  // --- Marketplace Stores ---
+  public getStores(): MarketplaceStore[] {
+    return (this.db.marketplaceStores || []).map((store) => ({ ...store, owner: this.getUserById(store.ownerId) || store.owner }));
+  }
+
+  public createStore(ownerId: string, input: { name: string; description: string; category: string; location: string; logoUrl?: string; coverUrl?: string }): MarketplaceStore {
+    const owner = this.getUserById(ownerId);
+    if (!owner) throw new Error('Please sign in before creating a store.');
+    const name = String(input.name || '').trim();
+    if (name.length < 3 || name.length > 60) throw new Error('Store name must be between 3 and 60 characters.');
+    if (!String(input.category || '').trim()) throw new Error('Choose a store category.');
+    if (!String(input.description || '').trim()) throw new Error('Add a short store description.');
+    const slugBase = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const slug = `${slugBase}-${Math.random().toString(36).slice(2, 6)}`;
+    const now = Date.now();
+    const store: MarketplaceStore = {
+      id: `store_${now}_${Math.random().toString(36).slice(2, 7)}`,
+      ownerId, owner, name, slug,
+      description: String(input.description).trim().slice(0, 600),
+      category: String(input.category).trim(),
+      location: String(input.location || '').trim().slice(0, 120),
+      logoUrl: input.logoUrl, coverUrl: input.coverUrl,
+      followers: [], createdAt: new Date(now).toISOString(), createdTimestamp: now,
+    };
+    this.db.marketplaceStores = this.db.marketplaceStores || [];
+    this.db.marketplaceStores.unshift(store);
+    this.schedulePersist();
+    return store;
+  }
+
+  public updateStore(storeId: string, ownerId: string, updates: Partial<Pick<MarketplaceStore, 'name' | 'description' | 'category' | 'location' | 'logoUrl' | 'coverUrl'>>): MarketplaceStore {
+    const stores = this.db.marketplaceStores || [];
+    const index = stores.findIndex((store) => store.id === storeId);
+    if (index < 0) throw new Error('Store not found.');
+    if (stores[index].ownerId !== ownerId) throw new Error('You can only edit your own store.');
+    const allowed: any = {};
+    for (const key of ['name', 'description', 'category', 'location', 'logoUrl', 'coverUrl']) {
+      if ((updates as any)[key] !== undefined) allowed[key] = (updates as any)[key];
+    }
+    const updated = { ...stores[index], ...allowed };
+    stores[index] = updated;
+    this.schedulePersist();
+    return { ...updated, owner: this.getUserById(ownerId) || updated.owner };
+  }
+
+  public toggleStoreFollow(storeId: string, userId: string): boolean {
+    const stores = this.db.marketplaceStores || [];
+    const store = stores.find((item) => item.id === storeId);
+    if (!store) throw new Error('Store not found.');
+    const followers = new Set(store.followers || []);
+    const following = followers.has(userId);
+    if (following) followers.delete(userId); else followers.add(userId);
+    store.followers = Array.from(followers);
+    this.schedulePersist();
+    return !following;
+  }
+
   // --- Communities ---
   public createCommunity(data: Partial<Community> & { name: string; description: string; ownerId?: string }): Community {
     const now = Date.now();
@@ -1190,7 +1273,7 @@ export class PersistentStorage {
       handle: cleanHandle,
       avatar: params.avatar || '',
       banner: '',
-      bio: params.bio?.trim() || 'New member of the RoseOne connected social network. 🌸',
+      bio: params.bio?.trim() || 'New member of the Gistupp connected social network. 🌸',
       website: '',
       location: '',
       joinedDate: 'Joined recently',
@@ -1263,7 +1346,7 @@ export class PersistentStorage {
 
     if (creds) {
       const hash = crypto.createHmac('sha256', creds.salt).update(password).digest('hex');
-      if (hash !== creds.passwordHash && password !== 'RoseOne2026!') {
+      if (hash !== creds.passwordHash) {
         throw new Error('Invalid username/email or password');
       }
     }

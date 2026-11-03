@@ -1,6 +1,6 @@
-# RoseOne — Everything, Connected
+# Gistupp — Everything, Connected
 
-RoseOne is a responsive React + TypeScript + Vite social application with a Netlify Functions API. New installs start with empty feeds, stories, messages, communities, and marketplace listings. Visitors must create an account or sign in; no showcase member accounts are shipped.
+Gistupp is a responsive React + TypeScript + Vite social application with a Netlify Functions API. New installs start with empty feeds, stories, messages, communities, and marketplace listings. Visitors must create an account or sign in; no showcase member accounts are shipped.
 
 ## Requirements
 
@@ -42,3 +42,15 @@ The current server storage implementation writes a JSON database file. On Netlif
 ## Story viewer crash fix
 
 The Story viewer previously returned early before calling its `useEffect` hooks. That changed the hook order when opening or closing a story and could trigger React's error boundary. The viewer now calls hooks consistently, safely handles missing/stale story indexes, and only marks a story viewed when a valid story is active.
+
+
+## Gistupp branding and PWA
+
+The product display name is now Gistupp. See `GISTUPP_REBRAND_PWA_STATUS.md` for the install flow, service worker behavior, deployment notes, and outstanding verification.
+
+
+## Gistupp LiveKit and Smart Gifts
+
+The Live Studio now integrates LiveKit room creation, scoped host/viewer tokens, public live discovery, room join/leave, camera/microphone publishing, persisted live chat and account-level chat appearance. Smart Gifts use original Gistupp vector artwork and a server-side wallet ledger/atomic gift RPC.
+
+Before enabling broadcasts, configure server-side `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` in Netlify. Never expose `SUPABASE_SECRET_KEY` or `LIVEKIT_API_SECRET` through any `VITE_` variable. Apply `supabase/migrations/202611030005_gistupp_live_wallet_gifts.sql` after the previous Live migration. Coin top-ups remain disabled until a payment provider is selected and integrated. See `GISTUPP_LIVEKIT_GIFTS_IMPLEMENTATION_STATUS.md` for scope and remaining work.

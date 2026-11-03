@@ -74,7 +74,7 @@ export const CreatePostModal: React.FC = () => {
     setIsAiLoading(true);
     setTimeout(() => {
       const suggestions = [
-        "Exploring clean tactile mobile architecture on RoseOne. What do you think of this interaction flow?",
+        "Exploring clean tactile mobile architecture on Gistupp. What do you think of this interaction flow?",
         "Refining our design system with high-contrast typography and subtle pink accents. Simple, warm, and intentional.",
         "Zero mock placeholders in production: every button connects to a real state change. Here's our latest update!",
       ];
@@ -166,7 +166,7 @@ export const CreatePostModal: React.FC = () => {
             rows={4}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Share your thoughts, photos, or questions with RoseOne..."
+            placeholder="Share your thoughts, photos, or questions with Gistupp..."
             className="w-full text-xs sm:text-sm bg-transparent text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none resize-none leading-relaxed"
           />
 

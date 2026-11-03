@@ -50,7 +50,7 @@ export const CreatorHubView: React.FC = () => {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white/80">
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span>RoseOne Creator Hub</span>
+              <span>Gistupp Creator Hub</span>
             </div>
             <h1 className="text-lg sm:text-xl font-bold mt-1">Creator Performance & Store</h1>
             <p className="text-xs text-white/90 mt-0.5 max-w-lg">
@@ -140,7 +140,7 @@ export const CreatorHubView: React.FC = () => {
             <p className="text-xs text-slate-500">
               {analytics.impressions30d === 0
                 ? 'Your reach analytics will populate dynamically as you publish posts and interact with followers.'
-                : `Your content has generated ${analytics.impressions30d} impressions across RoseOne.`}
+                : `Your content has generated ${analytics.impressions30d} impressions across Gistupp.`}
             </p>
           </div>
         </div>
@@ -156,7 +156,7 @@ export const CreatorHubView: React.FC = () => {
                 No products in catalog
               </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Add your first digital item or service to showcase to your RoseOne audience.
+                Add your first digital item or service to showcase to your Gistupp audience.
               </p>
               <button
                 onClick={() => setAddProductModalOpen(true)}
@@ -219,7 +219,7 @@ export const CreatorHubView: React.FC = () => {
             Plan scheduled announcements, live community events, and product launches here.
           </p>
           <button
-            onClick={() => showToast('Campaign manager: schedule your next launch with RoseOne tools', 'info')}
+            onClick={() => showToast('Campaign manager: schedule your next launch with Gistupp tools', 'info')}
             className="mt-3.5 px-4 py-2 bg-[#E91E8C] hover:bg-[#BE185D] text-white text-xs font-bold rounded-xl inline-flex items-center gap-1.5 transition-colors shadow-xs"
           >
             <Plus className="w-4 h-4" />

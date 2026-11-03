@@ -1,7 +1,10 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import crypto from 'crypto';
 import fs from 'fs';
 import { storage } from './storage';
+import { createClient } from '@supabase/supabase-js';
+import { AccessToken } from 'livekit-server-sdk';
 
 export function createExpressApp() {
   const app = express();
@@ -18,7 +21,7 @@ export function createExpressApp() {
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-user-id, x-session-token');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') {
       res.status(204).end();
       return;
@@ -59,34 +62,272 @@ export function createExpressApp() {
     })
   );
 
-  // --- Helper: Extract Authenticated User ---
-  const getAuthUser = (req: Request) => {
-    const authHeader = req.headers.authorization;
-    let token = '';
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7).trim();
-    } else if (req.headers['x-session-token']) {
-      token = String(req.headers['x-session-token']).trim();
-    }
-
-    if (token) {
-      const user = storage.getUserBySession(token);
-      if (user) return user;
-    }
-
-    const userIdHeader = req.headers['x-user-id'] as string;
-    if (userIdHeader) {
-      return storage.getUserById(userIdHeader);
-    }
-
-    return undefined;
+  // --- Supabase token verification ---
+  // Supabase Auth is the source of truth for browser bearer tokens. The API
+  // never trusts x-user-id or IDs supplied in request bodies as identity.
+  type AuthenticatedUser = {
+    id: string; name: string; handle: string; avatar: string; banner: string;
+    bio: string; joinedDate: string; verified: boolean; followersCount: number;
+    followingCount: number; postsCount: number; isPrivate: boolean;
+    followers: string[]; following: string[];
   };
+  const authUsers = new WeakMap<Request, AuthenticatedUser>();
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+
+  app.use(async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      const header = req.headers.authorization || '';
+      const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+      if (token && supabaseUrl && supabaseKey) {
+        const response = await fetch(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/user`, {
+          headers: { apikey: supabaseKey, Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const auth = await response.json() as { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at?: string };
+          const metadata = auth.user_metadata || {};
+          const name = String(metadata.name || metadata.full_name || auth.email?.split('@')[0] || 'Gistupp member');
+          const handle = String(metadata.handle || auth.email?.split('@')[0] || `member_${auth.id.slice(0, 8)}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 25);
+          const profile = storage.upsertSupabaseUser({
+            id: auth.id, name, handle, avatar: String(metadata.avatar_url || ''), banner: '',
+            bio: String(metadata.bio || ''), joinedDate: auth.created_at || new Date().toISOString(),
+            verified: false, followersCount: 0, followingCount: 0, postsCount: 0,
+            isPrivate: false, followers: [], following: [],
+          });
+          authUsers.set(req, profile as AuthenticatedUser);
+        }
+      }
+      next();
+    } catch (error) {
+      console.error('Supabase token verification failed:', error);
+      next();
+    }
+  });
+
+  const getAuthUser = (req: Request) => {
+    const supabaseUser = authUsers.get(req);
+    if (supabaseUser) return supabaseUser as any;
+    // Temporary compatibility for accounts created before Supabase Auth
+    // migration. This accepts only opaque server-issued tokens, never user IDs.
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    return token.startsWith('rose_') ? storage.getUserBySession(token) : undefined;
+  };
+
+  // Enforce one authenticated identity for every state-changing API request.
+  // This prevents a signed-in member from submitting another member's ID.
+  const identityFields = new Set([
+    'userId', 'currentUserId', 'authorId', 'senderId', 'sellerId',
+    'reporterId', 'actorId', 'ownerId', 'createdBy', 'profileUserId',
+  ]);
+  const findIdentityMismatch = (value: unknown, authenticatedId: string, depth = 0): string | null => {
+    if (!value || typeof value !== 'object' || depth > 6) return null;
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const mismatch = findIdentityMismatch(item, authenticatedId, depth + 1);
+        if (mismatch) return mismatch;
+      }
+      return null;
+    }
+    for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
+      if (identityFields.has(key) && nested != null && String(nested) !== authenticatedId) return key;
+      const mismatch = findIdentityMismatch(nested, authenticatedId, depth + 1);
+      if (mismatch) return mismatch;
+    }
+    return null;
+  };
+
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+    if (req.path === '/auth/register' || req.path === '/auth/login') return next();
+    const user = getAuthUser(req);
+    if (!user) {
+      res.status(401).json({ success: false, error: 'Authentication required' });
+      return;
+    }
+    const mismatch = findIdentityMismatch(req.body, user.id);
+    if (mismatch) {
+      res.status(403).json({ success: false, error: `The ${mismatch} does not match the authenticated account` });
+      return;
+    }
+    if (req.method === 'PUT' && /^\/users\/[^/]+$/.test(req.path) && req.path.split('/')[2] !== user.id) {
+      res.status(403).json({ success: false, error: 'You can only update your own profile' });
+      return;
+    }
+    next();
+  });
+
+  // --- LiveKit + Supabase Live service ---
+  const adminSupabaseUrl = process.env.SUPABASE_URL;
+  const adminSupabaseKey = process.env.SUPABASE_SECRET_KEY;
+  const liveDb = adminSupabaseUrl && adminSupabaseKey
+    ? createClient(adminSupabaseUrl, adminSupabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
+    : null;
+  const liveKitUrl = process.env.LIVEKIT_URL;
+  const liveKitApiKey = process.env.LIVEKIT_API_KEY;
+  const liveKitApiSecret = process.env.LIVEKIT_API_SECRET;
+
+  const makeLiveToken = async (identity: string, name: string, room: string, canPublish: boolean) => {
+    if (!liveKitApiKey || !liveKitApiSecret || !liveKitUrl) throw new Error('Live streaming is not configured. Add LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET in Netlify.');
+    const token = new AccessToken(liveKitApiKey, liveKitApiSecret, { identity, name, ttl: '2h' });
+    token.addGrant({ roomJoin: true, room, canPublish, canSubscribe: true, canPublishData: true });
+    return token.toJwt();
+  };
+
+  app.get('/api/live/sessions', async (_req: Request, res: Response) => {
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data, error } = await liveDb.from('roseone_live_sessions').select('id,host_id,room_name,title,category,visibility,status,viewer_count,peak_viewers,started_at,created_at').eq('status', 'live').eq('visibility', 'public').order('started_at', { ascending: false }).limit(40);
+    if (error) return res.status(500).json({ success: false, error: 'Could not load live sessions.' });
+    res.json({ success: true, sessions: data || [] });
+  });
+
+  app.post('/api/live/start', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    try {
+      const title = String(req.body?.title || '').trim().slice(0, 90);
+      const category = String(req.body?.category || 'Just Chatting').slice(0, 40);
+      const visibility = req.body?.visibility === 'followers' ? 'followers' : 'public';
+      if (title.length < 3) return res.status(400).json({ success: false, error: 'Live title must be at least 3 characters.' });
+      const roomName = `gistupp-${crypto.randomUUID()}`;
+      const { data, error } = await liveDb.from('roseone_live_sessions').insert({ host_id: user.id, room_name: roomName, title, category, visibility, status: 'scheduled' }).select('id,room_name,title,category,visibility,status').single();
+      if (error || !data) throw error || new Error('Could not create live session.');
+      const token = await makeLiveToken(user.id, user.name, roomName, true);
+      res.status(201).json({ success: true, session: data, token, serverUrl: liveKitUrl });
+    } catch (error) {
+      console.error('Live start failed:', error);
+      res.status(503).json({ success: false, error: error instanceof Error ? error.message : 'Unable to start live session.' });
+    }
+  });
+
+  app.post('/api/live/:id/publish', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data, error } = await liveDb.from('roseone_live_sessions').update({ status: 'live', started_at: new Date().toISOString() }).eq('id', req.params.id).eq('host_id', user.id).eq('status', 'scheduled').select('id').maybeSingle();
+    if (error || !data) return res.status(404).json({ success: false, error: 'Could not activate this live session.' });
+    res.json({ success: true });
+  });
+
+  app.post('/api/live/:id/join', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data: session, error } = await liveDb.from('roseone_live_sessions').select('id,host_id,room_name,title,visibility,status').eq('id', req.params.id).maybeSingle();
+    if (error || !session || session.status !== 'live') return res.status(404).json({ success: false, error: 'This live session is unavailable.' });
+    if (session.visibility === 'followers' && session.host_id !== user.id) {
+      const { data: follow } = await liveDb.from('roseone_follows').select('follower_id').eq('follower_id', user.id).eq('following_id', session.host_id).eq('status', 'accepted').maybeSingle();
+      if (!follow) return res.status(403).json({ success: false, error: 'Follow this creator to join their live session.' });
+    }
+    try {
+      const token = await makeLiveToken(user.id, user.name, session.room_name, session.host_id === user.id);
+      await liveDb.from('roseone_live_viewers').upsert({ session_id: session.id, user_id: user.id, joined_at: new Date().toISOString(), left_at: null });
+      const { count } = await liveDb.from('roseone_live_viewers').select('*', { count: 'exact', head: true }).eq('session_id', session.id).is('left_at', null);
+      await liveDb.from('roseone_live_sessions').update({ viewer_count: count || 0, peak_viewers: Math.max(count || 0, 0) }).eq('id', session.id);
+      res.json({ success: true, session, token, serverUrl: liveKitUrl });
+    } catch (e) { res.status(503).json({ success: false, error: e instanceof Error ? e.message : 'Unable to join live session.' }); }
+  });
+
+  app.post('/api/live/:id/leave', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { error } = await liveDb.from('roseone_live_viewers').update({ left_at: new Date().toISOString() }).eq('session_id', req.params.id).eq('user_id', user.id);
+    if (error) return res.status(500).json({ success: false, error: 'Could not update viewer presence.' });
+    const { count } = await liveDb.from('roseone_live_viewers').select('*', { count: 'exact', head: true }).eq('session_id', req.params.id).is('left_at', null);
+    await liveDb.from('roseone_live_sessions').update({ viewer_count: count || 0 }).eq('id', req.params.id);
+    res.json({ success: true, viewerCount: count || 0 });
+  });
+
+  app.post('/api/live/:id/end', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data, error } = await liveDb.from('roseone_live_sessions').update({ status: 'ended', ended_at: new Date().toISOString(), viewer_count: 0 }).eq('id', req.params.id).eq('host_id', user.id).select('id').maybeSingle();
+    if (error || !data) return res.status(404).json({ success: false, error: 'Live session not found or not owned by this account.' });
+    await liveDb.from('roseone_live_viewers').update({ left_at: new Date().toISOString() }).eq('session_id', req.params.id).is('left_at', null);
+    res.json({ success: true });
+  });
+
+  app.get('/api/live/wallet', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Wallet service is not configured.' });
+    const { data, error } = await liveDb.from('gistupp_coin_wallets').select('balance,lifetime_purchased,lifetime_spent').eq('user_id', user.id).maybeSingle();
+    if (error) return res.status(500).json({ success: false, error: 'Could not load wallet.' });
+    res.json({ success: true, balance: data?.balance || 0, lifetimePurchased: data?.lifetime_purchased || 0, lifetimeSpent: data?.lifetime_spent || 0 });
+  });
+
+  app.get('/api/live/chat-preferences', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data, error } = await liveDb.from('gistupp_live_chat_preferences').select('theme,opacity,font_size').eq('user_id', user.id).maybeSingle();
+    if (error) return res.status(500).json({ success: false, error: 'Could not load chat preferences.' });
+    res.json({ success: true, preferences: data || { theme: 'glass', opacity: 80, font_size: 'normal' } });
+  });
+
+  app.put('/api/live/chat-preferences', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const theme = ['glass','midnight','rose','ocean','classic'].includes(req.body?.theme) ? req.body.theme : 'glass';
+    const opacity = Math.max(30, Math.min(100, Number(req.body?.opacity) || 80));
+    const font_size = ['small','normal','large'].includes(req.body?.fontSize) ? req.body.fontSize : 'normal';
+    const { error } = await liveDb.from('gistupp_live_chat_preferences').upsert({ user_id: user.id, theme, opacity, font_size, updated_at: new Date().toISOString() });
+    if (error) return res.status(500).json({ success: false, error: 'Could not save chat preferences.' });
+    res.json({ success: true });
+  });
+
+  app.get('/api/live/:id/chat', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const { data: session } = await liveDb.from('roseone_live_sessions').select('id,host_id,status,visibility').eq('id', req.params.id).maybeSingle();
+    if (!session || session.status !== 'live') return res.status(404).json({ success: false, error: 'Live session unavailable.' });
+    if (session.visibility === 'followers' && session.host_id !== user.id) {
+      const { data: follow } = await liveDb.from('roseone_follows').select('follower_id').eq('follower_id', user.id).eq('following_id', session.host_id).eq('status', 'accepted').maybeSingle();
+      if (!follow) return res.status(403).json({ success: false, error: 'This room is for followers.' });
+    }
+    const { data, error } = await liveDb.from('roseone_live_chat_messages').select('id,sender_id,body,is_pinned,created_at').eq('session_id', req.params.id).is('deleted_at', null).order('created_at', { ascending: true }).limit(100);
+    if (error) return res.status(500).json({ success: false, error: 'Could not load live chat.' });
+    res.json({ success: true, messages: data || [] });
+  });
+
+  app.post('/api/live/:id/chat', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const body = String(req.body?.body || '').trim().slice(0, 500);
+    if (!body) return res.status(400).json({ success: false, error: 'Comment cannot be empty.' });
+    const { data: session } = await liveDb.from('roseone_live_sessions').select('id,host_id,status,visibility').eq('id', req.params.id).maybeSingle();
+    if (!session || session.status !== 'live') return res.status(404).json({ success: false, error: 'Live session unavailable.' });
+    if (session.visibility === 'followers' && session.host_id !== user.id) {
+      const { data: follow } = await liveDb.from('roseone_follows').select('follower_id').eq('follower_id', user.id).eq('following_id', session.host_id).eq('status', 'accepted').maybeSingle();
+      if (!follow) return res.status(403).json({ success: false, error: 'This room is for followers.' });
+    }
+    const { data, error } = await liveDb.from('roseone_live_chat_messages').insert({ session_id: req.params.id, sender_id: user.id, body }).select('id,sender_id,body,is_pinned,created_at').single();
+    if (error) return res.status(400).json({ success: false, error: 'Comment could not be sent.' });
+    res.status(201).json({ success: true, message: data });
+  });
+
+  app.post('/api/live/:id/gifts', async (req: Request, res: Response) => {
+    const user = getAuthUser(req);
+    if (!user) return res.status(401).json({ success: false, error: 'Authentication required.' });
+    if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
+    const giftCode = String(req.body?.giftCode || '').slice(0, 40);
+    const quantity = Math.max(1, Math.min(20, Number(req.body?.quantity) || 1));
+    const { data, error } = await liveDb.rpc('gistupp_send_live_gift', { p_sender_id: user.id, p_session_id: req.params.id, p_gift_code: giftCode, p_quantity: quantity });
+    if (error) return res.status(400).json({ success: false, error: error.message.includes('insufficient') ? 'Your Gistupp wallet does not have enough coins.' : 'Gift could not be delivered.' });
+    res.json({ success: true, receipt: data });
+  });
 
   // --- Health Check ---
   app.get('/api/health', (_req: Request, res: Response) => {
     res.json({
       status: 'ok',
-      service: 'RoseOne Backend',
+      service: 'Gistupp Backend',
       version: '1.0.0',
       deployment: isServerless ? 'netlify-serverless' : 'standalone-node',
       timestamp: new Date().toISOString(),
@@ -151,7 +392,11 @@ export function createExpressApp() {
   app.get('/api/bootstrap', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.query.userId as string) || '';
+      if (!authUser) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
+      }
+      const userId = authUser.id;
       const data = storage.getBootstrapData(userId);
       res.json({ success: true, data });
     } catch (err: any) {
@@ -261,8 +506,8 @@ export function createExpressApp() {
   app.post('/api/posts', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const { authorId: bodyAuthorId, content, media, pollData, tags, communityId } = req.body;
-      const authorId = authUser?.id || bodyAuthorId;
+      const { content, media, pollData, tags, communityId } = req.body;
+      const authorId = authUser?.id;
 
       if (!authorId || !content || typeof content !== 'string') {
         res.status(400).json({ success: false, error: 'authorId and content are required' });
@@ -280,7 +525,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.headers['x-user-id'] as string);
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(401).json({ success: false, error: 'Authentication required' });
@@ -298,7 +543,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
@@ -316,8 +561,8 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { reactionType, userId: bodyUserId } = req.body;
-      const userId = authUser?.id || bodyUserId;
+      const { reactionType } = req.body;
+      const userId = authUser?.id;
 
       if (!userId || !reactionType) {
         res.status(400).json({ success: false, error: 'userId and reactionType required' });
@@ -335,7 +580,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
@@ -353,8 +598,8 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { optionId, userId: bodyUserId } = req.body;
-      const userId = authUser?.id || bodyUserId;
+      const { optionId } = req.body;
+      const userId = authUser?.id;
 
       if (!userId || !optionId) {
         res.status(400).json({ success: false, error: 'userId and optionId required' });
@@ -382,8 +627,8 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { authorId: bodyAuthorId, content, voiceUrl, voiceDuration, parentCommentId } = req.body;
-      const authorId = authUser?.id || bodyAuthorId;
+      const { content, voiceUrl, voiceDuration, parentCommentId } = req.body;
+      const authorId = authUser?.id;
 
       if (!authorId || (!content && !voiceUrl)) {
         res.status(400).json({ success: false, error: 'authorId and content or voiceUrl required' });
@@ -408,7 +653,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId required' });
@@ -426,7 +671,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.headers['x-user-id'] as string);
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(401).json({ success: false, error: 'Authentication required' });
@@ -453,8 +698,8 @@ export function createExpressApp() {
   app.post('/api/stories', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const { userId: bodyUserId, mediaUrl, mediaType, caption, duration } = req.body;
-      const userId = authUser?.id || bodyUserId;
+      const { mediaUrl, mediaType, caption, duration } = req.body;
+      const userId = authUser?.id;
 
       if (!userId || !mediaUrl) {
         res.status(400).json({ success: false, error: 'userId and mediaUrl are required' });
@@ -472,7 +717,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.headers['x-user-id'] as string);
+      const userId = authUser?.id;
 
       if (!userId) {
         res.status(401).json({ success: false, error: 'Authentication required' });
@@ -490,7 +735,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId required' });
         return;
@@ -506,8 +751,8 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { reaction, userId: bodyUserId } = req.body;
-      const userId = authUser?.id || bodyUserId;
+      const { reaction } = req.body;
+      const userId = authUser?.id;
 
       if (!userId || !reaction) {
         res.status(400).json({ success: false, error: 'userId and reaction required' });
@@ -525,7 +770,7 @@ export function createExpressApp() {
   app.get('/api/conversations', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.query.userId as string);
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
         return;
@@ -569,8 +814,8 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { senderId: bodySenderId, text, voiceUrl, voiceDuration, mediaUrl } = req.body;
-      const senderId = authUser?.id || bodySenderId;
+      const { text, voiceUrl, voiceDuration, mediaUrl } = req.body;
+      const senderId = authUser?.id;
 
       if (!senderId || (!text && !voiceUrl && !mediaUrl)) {
         res.status(400).json({ success: false, error: 'senderId and message body required' });
@@ -588,7 +833,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId required' });
         return;
@@ -627,11 +872,15 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      if (authUser && authUser.id !== id && !authUser.verified) {
-        res.status(403).json({ success: false, error: 'Cannot modify another user profile' });
+      if (!authUser || authUser.id !== id) {
+        res.status(403).json({ success: false, error: 'You can only modify your own profile' });
         return;
       }
-      const updated = storage.updateProfile(id, req.body);
+      // Identity, trust, and relationship counters are server-managed fields.
+      const { id: _id, verified: _verified, followers: _followers, following: _following,
+        followersCount: _followersCount, followingCount: _followingCount,
+        postsCount: _postsCount, joinedDate: _joinedDate, ...safeUpdates } = req.body || {};
+      const updated = storage.updateProfile(id, safeUpdates);
       res.json({ success: true, user: updated });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -642,7 +891,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const currentUserId = authUser?.id || req.body.currentUserId;
+      const currentUserId = authUser?.id;
 
       if (!currentUserId) {
         res.status(400).json({ success: false, error: 'currentUserId is required' });
@@ -660,7 +909,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const currentUserId = authUser?.id || req.body.currentUserId;
+      const currentUserId = authUser?.id;
 
       if (!currentUserId) {
         res.status(400).json({ success: false, error: 'currentUserId is required' });
@@ -678,7 +927,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const currentUserId = authUser?.id || req.body.currentUserId;
+      const currentUserId = authUser?.id;
 
       if (!currentUserId) {
         res.status(400).json({ success: false, error: 'currentUserId is required' });
@@ -696,7 +945,7 @@ export function createExpressApp() {
   app.get('/api/notifications', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.query.userId as string);
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
         return;
@@ -720,7 +969,7 @@ export function createExpressApp() {
   app.post('/api/notifications/read-all', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || req.body.userId;
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
         return;
@@ -736,7 +985,7 @@ export function createExpressApp() {
   app.get('/api/settings', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const userId = authUser?.id || (req.query.userId as string);
+      const userId = authUser?.id;
       if (!userId) {
         res.status(400).json({ success: false, error: 'userId is required' });
         return;
@@ -751,8 +1000,8 @@ export function createExpressApp() {
   app.put('/api/settings', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const { userId: bodyUserId, updates } = req.body;
-      const userId = authUser?.id || bodyUserId;
+      const { updates } = req.body;
+      const userId = authUser?.id;
 
       if (!userId || !updates) {
         res.status(400).json({ success: false, error: 'userId and updates required' });
@@ -784,8 +1033,14 @@ export function createExpressApp() {
     }
   });
 
-  app.get('/api/moderation/reports', (_req: Request, res: Response) => {
+  app.get('/api/moderation/reports', (req: Request, res: Response) => {
     try {
+      const user = getAuthUser(req);
+      const adminIds = (process.env.GISTUPP_ADMIN_USER_IDS || '').split(',').map((id) => id.trim()).filter(Boolean);
+      if (!user || !adminIds.includes(user.id)) {
+        res.status(403).json({ success: false, error: 'Administrator access required' });
+        return;
+      }
       const reports = storage.getReports();
       res.json({ success: true, reports });
     } catch (err: any) {
@@ -795,6 +1050,12 @@ export function createExpressApp() {
 
   app.post('/api/moderation/action', (req: Request, res: Response) => {
     try {
+      const user = getAuthUser(req);
+      const adminIds = (process.env.GISTUPP_ADMIN_USER_IDS || '').split(',').map((id) => id.trim()).filter(Boolean);
+      if (!user || !adminIds.includes(user.id)) {
+        res.status(403).json({ success: false, error: 'Administrator access required' });
+        return;
+      }
       const { reportId, action } = req.body;
       if (!reportId || !['resolve', 'dismiss', 'delete_content'].includes(action)) {
         res.status(400).json({ success: false, error: 'Invalid reportId or action' });
@@ -811,8 +1072,8 @@ export function createExpressApp() {
   app.post('/api/marketplace', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const { sellerId: bodySellerId, data } = req.body;
-      const sellerId = authUser?.id || bodySellerId;
+      const { data } = req.body;
+      const sellerId = authUser?.id;
 
       if (!sellerId || !data) {
         res.status(400).json({ success: false, error: 'sellerId and data required' });
@@ -845,10 +1106,52 @@ export function createExpressApp() {
     }
   });
 
+  // --- Marketplace Stores ---
+  app.get('/api/marketplace/stores', (req: Request, res: Response) => {
+    try {
+      const q = String(req.query.q || '').toLowerCase().trim();
+      const category = String(req.query.category || '').trim();
+      let stores = storage.getStores();
+      if (q) stores = stores.filter((store) => `${store.name} ${store.description} ${store.category} ${store.location} ${store.owner?.handle || ''}`.toLowerCase().includes(q));
+      if (category && category !== 'All') stores = stores.filter((store) => store.category === category);
+      res.json({ success: true, stores });
+    } catch (err: any) { res.status(500).json({ success: false, error: err.message || 'Could not load stores.' }); }
+  });
+
+  app.post('/api/marketplace/stores', (req: Request, res: Response) => {
+    try {
+      const user = getAuthUser(req);
+      if (!user) { res.status(401).json({ success: false, error: 'Sign in to create a store.' }); return; }
+      const store = storage.createStore(user.id, req.body || {});
+      res.status(201).json({ success: true, store });
+    } catch (err: any) { res.status(400).json({ success: false, error: err.message || 'Could not create store.' }); }
+  });
+
+  app.put('/api/marketplace/stores/:id', (req: Request, res: Response) => {
+    try {
+      const user = getAuthUser(req);
+      if (!user) { res.status(401).json({ success: false, error: 'Sign in to edit your store.' }); return; }
+      const store = storage.updateStore(req.params.id, user.id, req.body?.updates || {});
+      res.json({ success: true, store });
+    } catch (err: any) { res.status(400).json({ success: false, error: err.message || 'Could not update store.' }); }
+  });
+
+  app.post('/api/marketplace/stores/:id/follow', (req: Request, res: Response) => {
+    try {
+      const user = getAuthUser(req);
+      if (!user) { res.status(401).json({ success: false, error: 'Sign in to follow stores.' }); return; }
+      const following = storage.toggleStoreFollow(req.params.id, user.id);
+      res.json({ success: true, following });
+    } catch (err: any) { res.status(400).json({ success: false, error: err.message || 'Could not follow store.' }); }
+  });
+
   // --- Communities ---
   app.post('/api/communities', (req: Request, res: Response) => {
     try {
+      const authUser = getAuthUser(req);
+      if (!authUser) { res.status(401).json({ success: false, error: 'Authentication required' }); return; }
       const { data } = req.body;
+      data.createdBy = authUser.id;
       if (!data || !data.name || !data.description) {
         res.status(400).json({ success: false, error: 'name and description required' });
         return;

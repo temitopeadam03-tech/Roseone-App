@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /reset-password
+Disallow: /settings
+Disallow: /messages
+Disallow: /notifications
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://gistupp.online/sitemap.xml

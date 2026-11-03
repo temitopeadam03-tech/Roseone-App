@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Community, CommunityRule } from '../../types';
+import { createClient } from '@supabase/supabase-js';
 
 interface CreateCommunityWizardProps {
   isOpen: boolean;
@@ -51,22 +52,8 @@ const CATEGORIES = [
   'General',
 ];
 
-const PRESET_AVATARS = [
-  { label: 'Tech & Code', url: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&auto=format&fit=crop&q=80' },
-  { label: 'Creative Studio', url: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?w=400&auto=format&fit=crop&q=80' },
-  { label: 'Film & Photo', url: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&auto=format&fit=crop&q=80' },
-  { label: 'Lifestyle & Bloom', url: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400&auto=format&fit=crop&q=80' },
-  { label: 'Gaming & Neon', url: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&auto=format&fit=crop&q=80' },
-  { label: 'Minimalist Wave', url: 'https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=400&auto=format&fit=crop&q=80' },
-];
+const COMMUNITY_IMAGE_BUCKET = 'gistupp-public';
 
-const PRESET_COVERS = [
-  { label: 'Rose Gradient Flow', url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=80' },
-  { label: 'Modern Workstation', url: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&auto=format&fit=crop&q=80' },
-  { label: 'Moody Cinematic Dark', url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&auto=format&fit=crop&q=80' },
-  { label: 'Abstract Pastel Waves', url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1200&auto=format&fit=crop&q=80' },
-  { label: 'Creative Studio Loft', url: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=1200&auto=format&fit=crop&q=80' },
-];
 
 const DEFAULT_RULE_PRESETS = [
   {
@@ -109,8 +96,9 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Technology');
-  const [avatar, setAvatar] = useState(PRESET_AVATARS[0].url);
-  const [coverImage, setCoverImage] = useState(PRESET_COVERS[0].url);
+  const [avatar, setAvatar] = useState('');
+  const [coverImage, setCoverImage] = useState('');
+  const [uploadingImage, setUploadingImage] = useState<'avatar' | 'cover' | null>(null);
   const [badge, setBadge] = useState('');
 
   // Step 2: Privacy & Visibility
@@ -208,7 +196,28 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
   if (!isOpen) return null;
 
   const generatedSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'your-space';
-  const inviteLink = `https://rosesocial.net/c/${generatedSlug}?inv=rose_${Math.random().toString(36).substring(2, 6)}`;
+  const inviteLink = `${window.location.origin}/c/${generatedSlug}?inv=${crypto.randomUUID().slice(0, 8)}`;
+
+  const uploadCommunityImage = async (file: File, kind: 'avatar' | 'cover') => {
+    const url = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
+    const key = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined)?.trim();
+    const token = localStorage.getItem('rose_auth_token');
+    if (!url || !key || !token || !currentUser?.id) { showToast('Sign in and configure Supabase before uploading community images.', 'error'); return; }
+    if (!file.type.startsWith('image/')) { showToast('Choose an image file.', 'error'); return; }
+    if (file.size > 8 * 1024 * 1024) { showToast('Community images must be 8 MB or smaller.', 'error'); return; }
+    setUploadingImage(kind);
+    try {
+      const client = createClient(url, key, { global: { headers: { Authorization: `Bearer ${token}` } } });
+      const extension = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${currentUser.id}/communities/${crypto.randomUUID()}-${kind}.${extension}`;
+      const { error } = await client.storage.from(COMMUNITY_IMAGE_BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data } = client.storage.from(COMMUNITY_IMAGE_BUCKET).getPublicUrl(path);
+      if (kind === 'avatar') setAvatar(data.publicUrl); else setCoverImage(data.publicUrl);
+      showToast(`${kind === 'avatar' ? 'Community icon' : 'Cover image'} uploaded.`, 'success');
+    } catch (err) { showToast(err instanceof Error ? err.message : 'Image upload failed. Check the gistupp-public storage bucket and its upload policy.', 'error'); }
+    finally { setUploadingImage(null); }
+  };
 
   // Save Draft handler
   const handleSaveDraft = () => {
@@ -286,8 +295,8 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
       description: description.trim(),
       category,
       badge: badge.trim() || (spaceType === 'group' ? 'Member Group' : 'Public Space'),
-      avatar: avatar || PRESET_AVATARS[0].url,
-      coverImage: coverImage || PRESET_COVERS[0].url,
+      avatar: avatar || undefined,
+      coverImage: coverImage || undefined,
       isPrivate,
       discoverability,
       whoCanJoin: whoCanJoin,
@@ -524,7 +533,7 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
                     className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1a151e] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    URL preview: <span className="font-mono text-[#BE185D]">rosesocial.net/c/{generatedSlug}</span>
+                    URL preview: <span className="font-mono text-[#BE185D]">gistupp.online/c/{generatedSlug}</span>
                   </p>
                 </div>
 
@@ -571,78 +580,28 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-slate-800">
                 {/* Avatar */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                    <span>Profile Icon / Avatar</span>
-                    <span className="text-[10px] text-slate-400">Presets or Image URL</span>
-                  </label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">Profile Icon / Avatar</label>
                   <div className="flex items-center gap-3 mb-2">
-                    <img
-                      src={avatar}
-                      alt="Avatar preview"
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-[#E91E8C] shadow-sm shrink-0"
-                    />
-                    <input
-                      type="url"
-                      value={avatar}
-                      onChange={(e) => setAvatar(e.target.value)}
-                      placeholder="Paste image URL..."
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1a151e] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
-                    />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_AVATARS.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setAvatar(p.url)}
-                        className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
-                          avatar === p.url
-                            ? 'border-[#E91E8C] bg-[#FCE7F3] text-[#BE185D] dark:bg-[#BE185D]/30 font-bold'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                    <div className="h-16 w-16 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800 flex items-center justify-center">
+                      {avatar ? <img src={avatar} alt="Uploaded community avatar" className="h-full w-full object-cover"/> : <ImageIcon className="text-slate-400"/>}
+                    </div>
+                    <label className="cursor-pointer rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-pink-400 dark:border-slate-700 dark:text-slate-200">
+                      {uploadingImage === 'avatar' ? 'Uploading…' : 'Upload image'}
+                      <input type="file" accept="image/*" className="hidden" disabled={!!uploadingImage} onChange={e => { const file = e.target.files?.[0]; if (file) void uploadCommunityImage(file, 'avatar'); e.currentTarget.value = ''; }}/>
+                    </label>
                   </div>
                 </div>
 
                 {/* Cover Banner */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5 flex items-center justify-between">
-                    <span>Cover Photo / Banner</span>
-                    <span className="text-[10px] text-slate-400">Presets or Image URL</span>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">Cover Photo / Banner</label>
+                  <div className="relative h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 mb-2 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    {coverImage ? <img src={coverImage} alt="Uploaded community cover" className="w-full h-full object-cover"/> : <span className="text-xs text-slate-400">No cover uploaded</span>}
+                  </div>
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:border-pink-400 dark:border-slate-700 dark:text-slate-200">
+                    <Upload size={14}/>{uploadingImage === 'cover' ? 'Uploading…' : 'Upload cover image'}
+                    <input type="file" accept="image/*" className="hidden" disabled={!!uploadingImage} onChange={e => { const file = e.target.files?.[0]; if (file) void uploadCommunityImage(file, 'cover'); e.currentTarget.value = ''; }}/>
                   </label>
-                  <div className="relative h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 mb-2">
-                    <img
-                      src={coverImage}
-                      alt="Cover preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <input
-                    type="url"
-                    value={coverImage}
-                    onChange={(e) => setCoverImage(e.target.value)}
-                    placeholder="Paste banner image URL..."
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#1a151e] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C] mb-1.5"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_COVERS.map((c, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setCoverImage(c.url)}
-                        className={`text-[10px] px-2 py-0.5 rounded-lg border transition-all ${
-                          coverImage === c.url
-                            ? 'border-[#E91E8C] bg-[#FCE7F3] text-[#BE185D] dark:bg-[#BE185D]/30 font-bold'
-                            : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                        }`}
-                      >
-                        {c.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>
@@ -675,7 +634,7 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
                       </h4>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      Anyone on RoseOne can see who is in the space and read posts and announcements.
+                      Anyone on Gistupp can see who is in the space and read posts and announcements.
                     </p>
                   </div>
 
@@ -1473,7 +1432,7 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
                     Optional AI Community Assistant
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                    RoseOne gives admins the choice to deploy an integrated AI guide to welcome joiners, answer rule questions, and compile discussion recaps.
+                    Gistupp gives admins the choice to deploy an integrated AI guide to welcome joiners, answer rule questions, and compile discussion recaps.
                   </p>
                   <p className="text-[11px] text-[#BE185D] dark:text-[#FCE7F3] font-semibold mt-1">
                     Strict Policy: AI is completely disabled unless you provide explicit admin authorization below.

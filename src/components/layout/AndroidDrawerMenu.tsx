@@ -166,7 +166,7 @@ export const AndroidDrawerMenu: React.FC = () => {
         },
         {
           id: 'about',
-          label: 'About RoseOne',
+          label: 'About Gistupp',
           icon: <Info className="w-5 h-5 text-slate-600 dark:text-slate-400" />,
           action: () => {
             setActiveView('settings');

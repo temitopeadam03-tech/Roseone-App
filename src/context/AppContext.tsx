@@ -395,7 +395,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsAuthenticated(false);
     setIsAuthModalOpen(true);
     setCurrentUser(DEFAULT_CURRENT_USER);
-    showToast('Signed out of RoseOne', 'info');
+    showToast('Signed out of Gistupp', 'info');
   };
 
   const switchUser = (userId: string) => {
@@ -730,7 +730,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Increment current user's genuine post count
     updateCurrentUser({ postsCount: currentUser.postsCount + 1 });
-    showToast('Post published to RoseOne!', 'success');
+    showToast('Post published to Gistupp!', 'success');
   };
 
   const [reshareModalPost, setReshareModalPost] = useState<Post | null>(null);
@@ -1341,7 +1341,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       avatar: '',
       banner: '',
       bio: '',
-      joinedDate: 'RoseOne member',
+      joinedDate: 'Gistupp member',
       verified: false,
       followersCount: 0,
       followingCount: 0,
@@ -1449,7 +1449,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           // Filter out legacy seeded communities while preserving member-created groups
-          const clean = parsed.filter((c) => c && c.id !== 'comm_1' && c.id !== 'comm_2' && c.id !== 'comm_creators');
+          const legacyCommunityIds = new Set(['comm_1', 'comm_2', 'comm_creators', 'group_demo', 'group_1', 'group_2', 'community_demo']);
+          const legacyNames = new Set(['rose social', 'welcome community', 'demo community', 'demo group', 'sample group', 'sample community']);
+          const clean = parsed.filter((c) => c && !legacyCommunityIds.has(String(c.id)) && !legacyNames.has(String(c.name || '').trim().toLowerCase()));
           return clean;
         }
       }
@@ -1494,7 +1496,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       slug: slug || 'community',
       description: data.description.trim(),
       avatar: data.avatar || '',
-      coverImage: data.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=80',
+      coverImage: data.coverImage || '',
       category: data.category || 'Technology',
       badge: data.badge || (data.type === 'group' ? 'Member Group' : 'Public Space'),
       membersCount: 1,
@@ -1502,7 +1504,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isPrivate: !!data.isPrivate,
       discoverability: data.discoverability || 'visible',
       whoCanJoin: data.whoCanJoin || (data.isPrivate ? 'approval_required' : 'anyone'),
-      inviteLink: data.inviteLink || `https://roseone.net/c/${slug}?inv=${Math.random().toString(36).substring(2, 8)}`,
+      inviteLink: data.inviteLink || `${window.location.origin}/c/${slug}?inv=${Math.random().toString(36).substring(2, 8)}`,
       requireAdminApprovalForJoin: data.requireAdminApprovalForJoin ?? !!data.isPrivate,
       ownerId: currentUser.id,
       owner: currentUser,
@@ -1922,7 +1924,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       rating: 5.0,
     };
     setProducts((prev) => [newProd, ...prev]);
-    showToast('Product added to your RoseOne Store!', 'success');
+    showToast('Product added to your Gistupp Store!', 'success');
   };
 
   // Marketplace listings are member-created; remove any legacy sample records
@@ -2060,7 +2062,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     } catch (error) {
-      console.warn('RoseOne legacy-data cleanup could not complete:', error);
+      console.warn('Gistupp legacy-data cleanup could not complete:', error);
     }
   }, []);
 
@@ -2208,18 +2210,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateSettings = (updater: (prev: UserSettings) => UserSettings) => {
     setSettings((prev) => {
       const next = updater(prev);
-      try {
-        localStorage.setItem('rose_settings', JSON.stringify(next));
-      } catch (e) {
-        console.warn(e);
-      }
+      try { localStorage.setItem('rose_settings', JSON.stringify(next)); } catch (e) { console.warn('Unable to cache settings locally', e); }
+      // Do not claim a successful save until the API confirms it. Local cache remains
+      // available for a responsive UI, while failures are surfaced to the member.
+      void api.updateSettings(currentUser.id, next).then((saved) => {
+        setSettings(saved);
+        try { localStorage.setItem('rose_settings', JSON.stringify(saved)); } catch { /* storage may be disabled */ }
+        showToast('Settings saved', 'success');
+      }).catch((error) => {
+        console.error('Settings API save failed:', error);
+        showToast('Could not sync settings to the server. Changes are only saved on this device.', 'error');
+      });
       return next;
     });
-    showToast('Settings saved', 'success');
   };
 
-  // Apply the user's appearance preferences globally. This client build persists locally;
-  // an authenticated backend can replace this storage layer without changing the UI.
+  // Apply appearance preferences globally. The server save above is authoritative when available;
+  // localStorage is only a responsive device cache, not cross-device storage.
   useEffect(() => {
     const root = document.documentElement;
     const applyAppearance = () => {
@@ -2273,7 +2280,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'pending',
     };
     setReportedItems((prev) => [newReport, ...prev]);
-    showToast('Thank you. Report submitted to RoseOne safety team.', 'info');
+    showToast('Thank you. Report submitted to Gistupp safety team.', 'info');
   };
 
   const blockUser = (userId: string) => {

@@ -135,7 +135,7 @@ export const AndroidSettingsView: React.FC = () => {
                     <p className="text-xs font-semibold text-slate-900 dark:text-white">
                       Active Device Session
                     </p>
-                    <p className="text-[11px] text-slate-500">RoseOne Web / Android Client</p>
+                    <p className="text-[11px] text-slate-500">Gistupp Web / Android Client</p>
                   </div>
                 </div>
                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40">
@@ -297,7 +297,7 @@ export const AndroidSettingsView: React.FC = () => {
                     Show Activity Status
                   </h4>
                   <p className="text-[11px] text-slate-500">
-                    Allow contacts to see when you are active on RoseOne.
+                    Allow contacts to see when you are active on Gistupp.
                   </p>
                 </div>
                 <input
@@ -458,7 +458,7 @@ export const AndroidSettingsView: React.FC = () => {
             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200">APPEARANCE MODE</h3>
-                <p className="text-[11px] text-slate-500 mt-1">Choose how RoseOne looks on this device.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Choose how Gistupp looks on this device.</p>
               </div>
               <div className="grid grid-cols-3 gap-2.5">
                 {[
@@ -483,7 +483,7 @@ export const AndroidSettingsView: React.FC = () => {
             <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-4">
               <div>
                 <h3 className="text-xs font-bold text-slate-700 dark:text-slate-200">MY COLOURS · THEME STUDIO</h3>
-                <p className="text-[11px] text-slate-500 mt-1">Choose an accent to personalize buttons, active tabs, links and highlights across RoseOne. Your choice is saved on this device.</p>
+                <p className="text-[11px] text-slate-500 mt-1">Choose an accent to personalize buttons, active tabs, links and highlights across Gistupp. Your choice is saved on this device.</p>
               </div>
               <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
                 {palettes.map((palette) => (
@@ -511,13 +511,13 @@ export const AndroidSettingsView: React.FC = () => {
                 </div>
                 <input id="roseone-custom-accent" type="color" value={accent}
                   onChange={(e) => updateAccent(e.target.value)}
-                  aria-label="Choose a custom RoseOne accent colour"
+                  aria-label="Choose a custom Gistupp accent colour"
                   className="w-11 h-10 rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent cursor-pointer" />
               </div>
               <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#17131A] p-3 space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: accent }}>R</span>
-                  <div className="flex-1"><p className="text-xs font-bold text-slate-900 dark:text-white">RoseOne preview</p><p className="text-[10px] text-slate-500">Your selected accent</p></div>
+                  <div className="flex-1"><p className="text-xs font-bold text-slate-900 dark:text-white">Gistupp preview</p><p className="text-[10px] text-slate-500">Your selected accent</p></div>
                   <span className="text-[10px] font-semibold" style={{ color: accent }}>{accent.toUpperCase()}</span>
                 </div>
                 <button type="button" className="w-full py-2 rounded-lg text-xs font-bold text-white shadow-xs"
@@ -528,7 +528,7 @@ export const AndroidSettingsView: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setIsSplashScreenActive(true);
-                    showToast('Playing RoseOne splash screen with your theme', 'info');
+                    showToast('Playing Gistupp splash screen with your theme', 'info');
                   }}
                   className="flex-1 min-h-[40px] rounded-xl border border-[var(--brand-accent)] text-[var(--brand-accent)] bg-[var(--brand-accent-soft)] text-xs font-bold hover:opacity-90 flex items-center justify-center gap-1.5 transition-all"
                 >
@@ -843,7 +843,7 @@ export const AndroidSettingsView: React.FC = () => {
                 ACCOUNT REMOVAL
               </h3>
               <p className="text-[11px] text-rose-700 dark:text-rose-300">
-                Permanently delete your account and associated social content from RoseOne.
+                Permanently delete your account and associated social content from Gistupp.
               </p>
               <button
                 onClick={() => setDeleteConfirmationOpen(true)}
@@ -926,7 +926,7 @@ export const AndroidSettingsView: React.FC = () => {
             <h1 className="text-sm font-bold text-slate-900 dark:text-white">
               {getSectionTitle()}
             </h1>
-            <p className="text-[10px] text-[#E91E8C] font-semibold">RoseOne</p>
+            <p className="text-[10px] text-[#E91E8C] font-semibold">Gistupp</p>
           </div>
         </div>
 
@@ -950,7 +950,7 @@ export const AndroidSettingsView: React.FC = () => {
       {deleteConfirmationOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <div className="bg-white dark:bg-[#17131A] rounded-2xl max-w-sm w-full p-5 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <h3 className="text-sm font-bold text-rose-600 mb-1.5">Delete RoseOne Account?</h3>
+            <h3 className="text-sm font-bold text-rose-600 mb-1.5">Delete Gistupp Account?</h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
               This will wipe your profile and remove any posts and messages. Proceed with deletion?
             </p>

@@ -12,6 +12,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 import { RoseOneLogo } from '../ui/RoseOneLogo';
+import { PWAInstallButton } from '../ui/PWAInstallButton';
 
 export const TopHeader: React.FC = () => {
   const {
@@ -34,13 +35,13 @@ export const TopHeader: React.FC = () => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto h-14 flex items-center justify-between gap-4">
-        {/* Zone 1: RoseOne Brand Identity */}
+        {/* Zone 1: Gistupp Brand Identity */}
         <div className="flex items-center gap-3">
           {/* Mobile drawer trigger */}
           <button
             onClick={() => setIsAndroidDrawerOpen(true)}
             className="lg:hidden min-h-[44px] min-w-[44px] flex items-center justify-center -ml-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
-            aria-label="Open RoseOne Android Menu"
+            aria-label="Open Gistupp Android Menu"
           >
             <Menu className="w-5 h-5 text-[#E91E8C]" />
           </button>
@@ -53,7 +54,7 @@ export const TopHeader: React.FC = () => {
               setActiveTab('home');
             }}
             className="flex items-center shrink-0 cursor-pointer"
-            aria-label="RoseOne Home"
+            aria-label="Gistupp Home"
           >
             <RoseOneLogo variant="horizontal" size="md" showTagline={false} />
           </a>
@@ -133,6 +134,7 @@ export const TopHeader: React.FC = () => {
 
         {/* Zone 3: Device Preview Selector & Primary Action */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <PWAInstallButton />
 
           {/* Notifications Button */}
           <button

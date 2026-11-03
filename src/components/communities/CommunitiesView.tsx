@@ -185,7 +185,7 @@ export const CommunitiesView: React.FC = () => {
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {searchQuery
               ? `No spaces match "${searchQuery}". Try a different keyword or start a new space.`
-              : 'Be the first to launch a community or group on RoseOne.'}
+              : 'Be the first to launch a community or group on Gistupp.'}
           </p>
           <div className="flex items-center justify-center gap-2 pt-2">
             <button

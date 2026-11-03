@@ -214,7 +214,7 @@ export const ListingDetailModal: React.FC = () => {
           <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-200">
             <ShieldCheck className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
-              RoseOne Safety Tip: Inspect items in public spaces. Never send wire transfers or advance gift card payments before verifying goods.
+              Gistupp Safety Tip: Inspect items in public spaces. Never send wire transfers or advance gift card payments before verifying goods.
             </span>
           </div>
         </div>

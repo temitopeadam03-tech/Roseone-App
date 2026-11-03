@@ -285,7 +285,7 @@ export const FeedView: React.FC = () => {
             onClick={() => setCreatePostModalOpen(true)}
             className="flex-1 min-h-[40px] px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200/70 dark:hover:bg-slate-800 text-left text-xs sm:text-sm text-slate-500 dark:text-slate-400 transition-colors"
           >
-            What's happening on RoseOne?
+            What's happening on Gistupp?
           </button>
         </div>
 

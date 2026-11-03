@@ -240,7 +240,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
           <span
             className={`font-black tracking-tight text-slate-900 dark:text-white ${currentSize.text} ${textClassName}`}
           >
-            Rose<span className="bg-gradient-to-r from-[#E91E8C] to-[#BE185D] bg-clip-text text-transparent">One</span>
+            Gist<span className="bg-gradient-to-r from-[#E91E8C] to-[#BE185D] bg-clip-text text-transparent">upp</span>
           </span>
           {showTagline && (
             <span className="mt-1.5 text-[11px] font-medium tracking-wide text-slate-500 dark:text-slate-400">
@@ -268,7 +268,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
         <span
           className={`font-extrabold tracking-tight text-slate-900 dark:text-white ${currentSize.text} ${textClassName}`}
         >
-          Rose<span className="bg-gradient-to-r from-[#E91E8C] to-[#BE185D] bg-clip-text text-transparent">One</span>
+          Gist<span className="bg-gradient-to-r from-[#E91E8C] to-[#BE185D] bg-clip-text text-transparent">upp</span>
         </span>
         {showTagline && (
           <span className="text-[10px] font-semibold tracking-wider text-slate-400 dark:text-slate-400 -mt-0.5 uppercase">

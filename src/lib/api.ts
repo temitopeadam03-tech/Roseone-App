@@ -10,6 +10,7 @@ import {
   UserSettings,
   Comment,
   MarketplaceListing,
+  MarketplaceStore,
   ReportedItem,
   ReactionType,
 } from '../types';
@@ -449,6 +450,23 @@ class ApiClient {
       method: 'DELETE',
     });
     return res.success;
+  }
+
+  // Marketplace stores
+  public async getStores(query = ''): Promise<MarketplaceStore[]> {
+    const suffix = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : '';
+    const res = await this.request<{ success: boolean; stores: MarketplaceStore[] }>(`/api/marketplace/stores${suffix}`);
+    return res.stores || [];
+  }
+
+  public async createStore(input: { name: string; description: string; category: string; location: string }): Promise<MarketplaceStore> {
+    const res = await this.request<{ success: boolean; store: MarketplaceStore }>('/api/marketplace/stores', { method: 'POST', body: JSON.stringify(input) });
+    return res.store;
+  }
+
+  public async followStore(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; following: boolean }>(`/api/marketplace/stores/${encodeURIComponent(id)}/follow`, { method: 'POST' });
+    return res.following;
   }
 
   // Communities

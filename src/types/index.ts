@@ -1,6 +1,6 @@
 export type DeviceMode = 'auto' | 'android' | 'tablet' | 'desktop';
 
-export type AndroidTab = 'home' | 'explore' | 'create' | 'messages' | 'market' | 'profile';
+export type AndroidTab = 'home' | 'explore' | 'create' | 'live' | 'messages' | 'market' | 'profile';
 
 export type AndroidSettingsSection =
   | 'overview'
@@ -411,6 +411,22 @@ export type ProductCategory =
   | 'Art & Collectibles'
   | 'Other';
 
+export interface MarketplaceStore {
+  id: string;
+  ownerId: string;
+  owner: User;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  location: string;
+  logoUrl?: string;
+  coverUrl?: string;
+  followers: string[];
+  createdAt: string;
+  createdTimestamp: number;
+}
+
 export type ProductCondition = 'New' | 'Like New' | 'Good' | 'Fair';
 export type ListingStatus = 'available' | 'sold' | 'pending';
 
@@ -420,6 +436,9 @@ export interface MarketplaceListing {
   description: string;
   price: number;
   category: ProductCategory;
+  subcategory?: string;
+  attributes?: Record<string, string>;
+  storeId?: string;
   condition: ProductCondition;
   images: string[];
   seller: User;

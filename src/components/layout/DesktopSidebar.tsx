@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   PlusCircle,
   ShoppingBag,
+  Radio,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
@@ -53,6 +54,13 @@ export const DesktopSidebar: React.FC = () => {
         setActiveTab('explore');
       },
       isActive: activeTab === 'explore',
+    },
+    {
+      id: 'live',
+      label: 'Live',
+      icon: <Radio className="w-5 h-5" />,
+      action: () => { setActiveView('feed'); setActiveTab('live'); },
+      isActive: activeTab === 'live',
     },
     {
       id: 'messages',
@@ -123,7 +131,7 @@ export const DesktopSidebar: React.FC = () => {
     },
     {
       id: 'ai-assistant',
-      label: 'RoseOne AI',
+      label: 'Gistupp AI',
       icon: <Sparkles className="w-5 h-5 text-amber-500" />,
       action: () => {
         setAiAssistantModalOpen(true);

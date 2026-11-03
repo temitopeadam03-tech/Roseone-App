@@ -178,7 +178,7 @@ export const MessagesView: React.FC = () => {
                 No conversations yet
               </h4>
               <p className="text-[11px] text-slate-500 mt-1">
-                Start a conversation with any member on RoseOne.
+                Start a conversation with any member on Gistupp.
               </p>
               <button
                 onClick={() => setNewChatModalOpen(true)}
@@ -511,7 +511,7 @@ export const MessagesView: React.FC = () => {
           <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
             No conversations yet
           </h4>
-          <p className="text-xs text-slate-500 mt-1">Start a conversation with anyone on RoseOne.</p>
+          <p className="text-xs text-slate-500 mt-1">Start a conversation with anyone on Gistupp.</p>
           <button
             onClick={() => setNewChatModalOpen(true)}
             className="mt-4 px-4 py-2 bg-[#E91E8C] hover:bg-[#BE185D] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"

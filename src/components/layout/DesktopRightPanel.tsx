@@ -36,7 +36,7 @@ export const DesktopRightPanel: React.FC = () => {
         className="p-3 bg-white dark:bg-[#17131A] border border-slate-200/80 dark:border-slate-800 hover:border-[#E91E8C] rounded-2xl flex items-center gap-2.5 text-xs text-slate-500 cursor-pointer transition-colors shadow-xs"
       >
         <Search className="w-4 h-4 text-slate-400" />
-        <span>Search RoseOne...</span>
+        <span>Search Gistupp...</span>
       </div>
 
       {/* Trending Box - Genuine Real Data */}
@@ -44,7 +44,7 @@ export const DesktopRightPanel: React.FC = () => {
         <div className="flex items-center gap-2 mb-3">
           <TrendingUp className="w-4 h-4 text-[#E91E8C]" />
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-            Trending on RoseOne
+            Trending on Gistupp
           </h3>
         </div>
 
@@ -167,7 +167,7 @@ export const DesktopRightPanel: React.FC = () => {
           <span>·</span>
           <span>Community Standards</span>
         </div>
-        <p>© 2026 RoseOne Inc. All rights reserved.</p>
+        <p>© 2026 Gistupp Inc. All rights reserved.</p>
       </footer>
     </aside>
   );

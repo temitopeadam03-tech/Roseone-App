@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Compass, PlusCircle, MessageCircle, ShoppingBag } from 'lucide-react';
+import { Home, Compass, PlusCircle, MessageCircle, ShoppingBag, Radio } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { AndroidTab } from '../../types';
 
@@ -41,6 +41,11 @@ export const AndroidBottomTabs: React.FC = () => {
       ),
     },
     {
+      id: 'live',
+      label: 'Live',
+      icon: <Radio className="w-5 h-5" />,
+    },
+    {
       id: 'messages',
       label: 'Messages',
       icon: (
@@ -72,8 +77,8 @@ export const AndroidBottomTabs: React.FC = () => {
 
   return (
     <nav
-      aria-label="RoseOne Android Bottom Navigation"
-      className="grid grid-cols-5 items-center h-14 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-2 select-none z-30 shrink-0"
+      aria-label="Gistupp Android Bottom Navigation"
+      className="grid grid-cols-6 items-center h-14 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-2 select-none z-30 shrink-0"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;

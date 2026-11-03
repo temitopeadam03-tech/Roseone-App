@@ -1,7 +1,7 @@
-# RoseOne pre-launch checklist
+# Gistupp pre-launch checklist
 
 ## Completed in this cleanup
-- Removed built-in Clara, Mateo, Sophia, and RoseOne showcase accounts from new installs.
+- Removed built-in Clara, Mateo, Sophia, and Gistupp showcase accounts from new installs.
 - Removed seeded posts, comments, stories, demo conversation, and official sample community from backend initialization.
 - Added migration cleanup for legacy seeded records in the local JSON database and browser storage while preserving member-created content.
 - Removed quick-access demo login buttons and stock avatar/banner defaults for newly registered profiles.

@@ -1,236 +1,52 @@
-import React, { useState } from 'react';
-import {
-  Search,
-  TrendingUp,
-  Video,
-  Compass,
-  Users,
-  Film,
-  PlusCircle,
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Search, Compass, Users, TrendingUp, Play, Heart, MessageCircle, Repeat2, Bookmark, Share2, PlusCircle, Film } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { PostCard } from '../feed/PostCard';
 import { Avatar } from '../ui/Avatar';
 
+const isVideoSource = (src: string) => /^data:video\//i.test(src) || /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(src) || /video/i.test(src);
+type FeedMode = 'discover' | 'circle' | 'following' | 'trending';
+
 export const ExploreView: React.FC = () => {
-  const {
-    posts,
-    allUsers,
-    currentUser,
-    toggleFollowUser,
-    openUserProfile,
-    setCreatePostModalOpen,
-  } = useApp();
+  const { posts, currentUser, toggleFollowUser, openUserProfile, setCreatePostModalOpen, toggleLikePost, toggleSavePost, setReshareModalPost, showToast } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'top' | 'trending' | 'videos' | 'creators'>('top');
+  const [activeTab, setActiveTab] = useState<FeedMode>('discover');
+  const [autoNext, setAutoNext] = useState(() => localStorage.getItem('roseone_video_auto_next') !== 'false');
+  const [activeIndex, setActiveIndex] = useState(0);
+  const query = searchQuery.trim().toLowerCase();
+  const videoPosts = useMemo(() => posts.filter(p => (p.media || []).some(isVideoSource)), [posts]);
+  const filtered = useMemo(() => videoPosts.filter(p => {
+    if (activeTab === 'circle' && !currentUser.following?.includes(p.author.id) && p.author.id !== currentUser.id) return false;
+    if (activeTab === 'following' && !currentUser.following?.includes(p.author.id)) return false;
+    if (query && ![p.content, p.author?.name, p.author?.handle, ...(p.tags || [])].some(v => String(v || '').toLowerCase().includes(query))) return false;
+    return true;
+  }).sort((a,b) => activeTab === 'trending' ? (b.viewsCount + b.likesCount * 3 + b.commentsCount * 2) - (a.viewsCount + a.likesCount * 3 + a.commentsCount * 2) : b.createdTimestamp-a.createdTimestamp), [videoPosts, activeTab, currentUser, query]);
+  const current = filtered[Math.min(activeIndex, Math.max(0, filtered.length - 1))];
+  const setAutoNextAndSave = (value: boolean) => { setAutoNext(value); localStorage.setItem('roseone_video_auto_next', String(value)); showToast('Video playback preference saved on this device.', 'success'); };
+  const nextVideo = () => setActiveIndex(i => Math.min(i + 1, filtered.length - 1));
+  const previousVideo = () => setActiveIndex(i => Math.max(i - 1, 0));
+  const switchTab = (tab: FeedMode) => { setActiveTab(tab); setActiveIndex(0); };
 
-  // Extract real tags from actual user posts
-  const realTagCounts: Record<string, number> = {};
-  posts.forEach((p) => {
-    p.tags?.forEach((tag) => {
-      const clean = tag.replace(/^#/, '');
-      realTagCounts[clean] = (realTagCounts[clean] || 0) + 1;
-    });
-  });
-
-  const trendingTags = Object.entries(realTagCounts).sort((a, b) => b[1] - a[1]);
-
-  // Search filtering over real posts safely
-  const q = searchQuery.toLowerCase().trim();
-  const matchingPosts = posts.filter((p) => {
-    if (!p) return false;
-    if (!q) return true;
-    const matchContent = (p.content || '').toLowerCase().includes(q);
-    const matchName = (p.author?.name || '').toLowerCase().includes(q);
-    const matchHandle = (p.author?.handle || '').toLowerCase().includes(q);
-    const matchTags = Array.isArray(p.tags) && p.tags.some((t) => (t || '').toLowerCase().includes(q));
-    return matchContent || matchName || matchHandle || matchTags;
-  });
-
-  // Creators: all platform users except current logged in user
-  const otherUsers = allUsers.filter((u) => u.id !== currentUser.id);
-
-  return (
-    <div className="space-y-3 pb-8">
-      {/* Search Header */}
-      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3 shadow-xs">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search posts, hashtags, or creators on RoseOne..."
-            className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
-          />
-        </div>
-
-        {/* Tab filters */}
-        <div className="flex items-center gap-1 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-          {[
-            { id: 'top', label: 'Top' },
-            { id: 'trending', label: 'Trending' },
-            { id: 'videos', label: 'Videos & Clips' },
-            { id: 'creators', label: 'Creators' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 min-h-[34px] py-1 text-xs font-semibold rounded-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-[#FCE7F3] dark:bg-[#BE185D]/30 text-[#BE185D] dark:text-[#FCE7F3]'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+  return <div className="pb-8 space-y-4">
+    <section className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-4 sm:p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><p className="text-[11px] font-bold uppercase tracking-[.22em] text-[#E91E8C]">Gistupp Explore</p><h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Videos worth your time</h1><p className="text-xs text-slate-500 mt-1">Discover real videos shared by Gistupp members.</p></div>
+        <button onClick={() => setCreatePostModalOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-[#E91E8C] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#BE185D]"><PlusCircle size={16}/> Create a post</button>
       </div>
-
-      {/* Videos Tab - Genuine Empty State */}
-      {activeTab === 'videos' ? (
-        <div className="p-10 text-center bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-          <Film className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-          <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-            No video clips published yet
-          </h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            Upload your first video clip to reach the community and appear in discovery feeds.
-          </p>
-          <button
-            onClick={() => setCreatePostModalOpen(true)}
-            className="mt-3.5 px-4 py-2 bg-[#E91E8C] hover:bg-[#BE185D] text-white text-xs font-bold rounded-xl inline-flex items-center gap-1.5 transition-colors shadow-xs"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Upload Media</span>
-          </button>
-        </div>
-      ) : activeTab === 'creators' ? (
-        /* Creators Tab - Genuine Members */
-        <div className="space-y-3">
-          {otherUsers.length === 0 ? (
-            <div className="p-10 text-center bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-              <Users className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                No creator profiles yet
-              </h3>
-              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                As creators join RoseOne, their profiles will appear here for you to connect with.
-              </p>
-            </div>
-          ) : (
-            otherUsers.map((creator) => {
-              const isFollowing = currentUser.following?.includes(creator.id);
-              return (
-                <div
-                  key={creator.id}
-                  className="p-3.5 bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
-                >
-                  <button
-                    onClick={() => openUserProfile(creator)}
-                    className="flex items-center gap-3 min-w-0 text-left focus:outline-none flex-1"
-                  >
-                    <Avatar src={creator.avatar} name={creator.name} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate hover:underline">
-                          {creator.name}
-                        </h4>
-                        {creator.verified && (
-                          <span className="text-[10px] text-[#E91E8C] font-bold">✓</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500">@{creator.handle}</p>
-                      {creator.bio && (
-                        <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate mt-0.5">
-                          {creator.bio}
-                        </p>
-                      )}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => toggleFollowUser(creator.id)}
-                    className={`min-h-[34px] px-3.5 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
-                      isFollowing
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20'
-                        : 'bg-[#E91E8C] hover:bg-[#BE185D] text-white shadow-xs'
-                    }`}
-                  >
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      ) : (
-        /* Top / Trending View */
-        <div className="space-y-3">
-          {/* Trending hashtags strip */}
-          <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3.5 shadow-xs">
-            <div className="flex items-center gap-2 mb-2.5">
-              <TrendingUp className="w-4 h-4 text-[#E91E8C]" />
-              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                Trending on RoseOne
-              </h3>
-            </div>
-
-            {trendingTags.length === 0 ? (
-              <div className="py-1">
-                <p className="text-xs text-slate-500 mb-2">Explore popular topics:</p>
-                <div className="flex flex-wrap gap-2">
-                  {['photography', 'design', 'creatives', 'mobiledev', 'audio', 'tokyo'].map((topic) => (
-                    <button
-                      key={topic}
-                      onClick={() => setSearchQuery(topic)}
-                      className="px-3 py-1 bg-slate-100 dark:bg-slate-800/80 hover:bg-[#FCE7F3] dark:hover:bg-[#BE185D]/20 text-slate-700 dark:text-slate-300 hover:text-[#BE185D] dark:hover:text-[#FCE7F3] rounded-xl text-xs font-semibold transition-colors"
-                    >
-                      #{topic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {trendingTags.map(([tag, count]) => (
-                  <div
-                    key={tag}
-                    onClick={() => setSearchQuery(tag)}
-                    className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors"
-                  >
-                    <span className="text-xs font-bold text-slate-900 dark:text-white hover:text-[#E91E8C]">
-                      #{tag}
-                    </span>
-                    <span className="text-xs text-slate-500 tabular-nums">
-                      {count} {count === 1 ? 'post' : 'posts'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+      <div className="relative mt-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"/><input value={searchQuery} onChange={e => {setSearchQuery(e.target.value);setActiveIndex(0)}} placeholder="Search videos, creators or hashtags" className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-[#E91E8C]"/></div>
+      <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar">{([{id:'discover',label:'Discover',icon:Compass},{id:'circle',label:'Circle',icon:Users},{id:'following',label:'Following',icon:Users},{id:'trending',label:'Trending',icon:TrendingUp}] as const).map(t => <button key={t.id} onClick={() => switchTab(t.id)} className={`inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold ${activeTab===t.id?'bg-[#FCE7F3] text-[#BE185D] dark:bg-[#BE185D]/25 dark:text-pink-200':'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'}`}><t.icon size={15}/>{t.label}</button>)}</div>
+    </section>
+    <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-4 items-start">
+      <div className="min-w-0">
+        {!current ? <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] px-6 py-16 text-center"><Film className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600"/><h2 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">No videos to show yet</h2><p className="mx-auto mt-2 max-w-md text-sm text-slate-500">When members publish videos, they will appear here. You can create a post to share your own video—no sample videos are added.</p><button onClick={() => setCreatePostModalOpen(true)} className="mt-5 rounded-xl bg-[#E91E8C] px-4 py-2.5 text-sm font-bold text-white">Share a video</button></div> : <article className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-black shadow-lg">
+          <div className="relative mx-auto flex min-h-[60vh] max-h-[82vh] max-w-[620px] items-center justify-center bg-black">
+            {(() => { const source = (current.media || []).find(isVideoSource); return source ? <video key={current.id + source} src={source} controls playsInline autoPlay className="max-h-[82vh] w-full object-contain" onEnded={() => {if(autoNext) nextVideo()}} onError={() => showToast('This video could not be played in this browser.', 'error')} /> : null; })()}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent p-4 pt-16 text-white pointer-events-none"><button className="pointer-events-auto flex items-center gap-2 text-left" onClick={() => openUserProfile(current.author)}><Avatar src={current.author.avatar} name={current.author.name} size="sm"/><span className="font-bold text-sm">@{current.author.handle}</span></button><p className="mt-2 text-sm whitespace-pre-wrap break-words">{current.content}</p>{current.tags?.length ? <p className="mt-1 text-xs text-pink-200">{current.tags.map(t=>t.startsWith('#')?t:`#${t}`).join(' ')}</p>:null}</div>
+            <div className="absolute right-3 bottom-24 flex flex-col gap-4 text-white"><button onClick={() => toggleLikePost(current.id)} className="flex flex-col items-center gap-1 drop-shadow"><Heart size={25}/><span className="text-[11px]">{current.likesCount}</span></button><button onClick={() => showToast('Open the post to view and reply to comments.', 'info')} className="flex flex-col items-center gap-1 drop-shadow"><MessageCircle size={25}/><span className="text-[11px]">{current.commentsCount}</span></button><button onClick={() => setReshareModalPost(current)} className="drop-shadow"><Repeat2 size={25}/></button><button onClick={() => toggleSavePost(current.id)} className="drop-shadow"><Bookmark size={23}/></button><button onClick={() => {navigator.clipboard?.writeText(`${location.origin}/post/${current.id}`);showToast('Video link copied when clipboard access is available.', 'success')}} className="drop-shadow"><Share2 size={23}/></button></div>
           </div>
-
-          {/* Posts Feed for Explore */}
-          <div className="space-y-3">
-            {matchingPosts.length === 0 ? (
-              <div className="p-10 text-center bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-                <Compass className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
-                <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                  {searchQuery ? 'No matching posts found' : 'No posts in discovery'}
-                </h4>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                  {searchQuery
-                    ? `No results found for "${searchQuery}". Try a different keyword.`
-                    : 'Posts shared with the community will appear here for discovery.'}
-                </p>
-              </div>
-            ) : (
-              matchingPosts.map((post) => <PostCard key={post.id} post={post} />)
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+          <div className="flex items-center justify-between gap-3 bg-white px-4 py-3 dark:bg-[#17131A]"><div className="text-xs text-slate-500">Video {filtered.length ? activeIndex+1 : 0} of {filtered.length}</div><div className="flex gap-2"><button disabled={activeIndex===0} onClick={previousVideo} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40 dark:border-slate-700">Previous</button><button disabled={activeIndex>=filtered.length-1} onClick={nextVideo} className="rounded-lg bg-[#E91E8C] px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Next video</button></div></div>
+        </article>}
+      </div>
+      <aside className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-4 space-y-4"><div><h2 className="font-bold text-slate-900 dark:text-white">Playback controls</h2><p className="mt-1 text-xs leading-5 text-slate-500">Choose how Explore moves between videos.</p></div><label className="flex items-start justify-between gap-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 p-3"><span><span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">Auto-play next</span><span className="mt-1 block text-xs text-slate-500">Move to the next video when the current one ends.</span></span><input type="checkbox" checked={autoNext} onChange={e=>setAutoNextAndSave(e.target.checked)} className="mt-1 accent-[#E91E8C]"/></label><div className="rounded-xl border border-slate-200 dark:border-slate-700 p-3"><p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Manual navigation</p><p className="mt-1 text-xs leading-5 text-slate-500">Previous and Next remain available, so you can always move videos yourself.</p></div><div className="rounded-xl bg-pink-50 dark:bg-pink-950/20 p-3"><p className="text-xs font-semibold text-[#BE185D] dark:text-pink-200">Video upload limit</p><p className="mt-1 text-xs text-slate-600 dark:text-slate-300">Gistupp's intended maximum is 30 minutes per video. Server-side upload enforcement and media storage still need production verification.</p></div></aside>
+    </section>
+  </div>;
 };

@@ -8,6 +8,7 @@ import { DesktopSidebar } from './components/layout/DesktopSidebar';
 import { DesktopRightPanel } from './components/layout/DesktopRightPanel';
 import { FeedView } from './components/feed/FeedView';
 import { ExploreView } from './components/explore/ExploreView';
+import { LiveView } from './components/live/LiveView';
 import { MessagesView } from './components/messages/MessagesView';
 import { ProfileView } from './components/profile/ProfileView';
 import { CommunitiesView } from './components/communities/CommunitiesView';
@@ -26,6 +27,7 @@ import { EditProfileModal } from './components/profile/EditProfileModal';
 import { UserProfileModal } from './components/profile/UserProfileModal';
 import { NotificationsModal } from './components/notifications/NotificationsModal';
 import { AuthModal } from './components/auth/AuthModal';
+import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
 import { CreateListingModal } from './components/marketplace/CreateListingModal';
 import { ListingDetailModal } from './components/marketplace/ListingDetailModal';
 import { CreateCommunityWizard } from './components/communities/CreateCommunityWizard';
@@ -77,6 +79,9 @@ const MainContent: React.FC = () => {
         case 'explore':
           viewNode = <ExploreView />;
           break;
+        case 'live':
+          viewNode = <LiveView />;
+          break;
         case 'messages':
           viewNode = <MessagesView />;
           break;
@@ -107,6 +112,7 @@ const MainContent: React.FC = () => {
 
   const isWideFullView =
     activeTab === 'market' ||
+    activeTab === 'live' ||
     activeView === 'marketplace' ||
     activeTab === 'messages' ||
     activeView === 'communities' ||
@@ -185,8 +191,9 @@ const MainContent: React.FC = () => {
 };
 
 export default function App() {
+  if (window.location.pathname === '/reset-password') return <ResetPasswordPage />;
   return (
-    <ErrorBoundary fallbackTitle="RoseOne is recovering">
+    <ErrorBoundary fallbackTitle="Gistupp is recovering">
       <AppProvider>
         <SplashScreen />
         <MainContent />

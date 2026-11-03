@@ -10,7 +10,8 @@ import {
   Package,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { ProductCategory, ProductCondition } from '../../types';
+import { ProductCategory, ProductCondition, MarketplaceStore } from '../../types';
+import { api } from '../../lib/api';
 
 const CATEGORIES: ProductCategory[] = [
   'Electronics',
@@ -32,6 +33,24 @@ const CATEGORIES: ProductCategory[] = [
 ];
 
 const CONDITIONS: ProductCondition[] = ['New', 'Like New', 'Good', 'Fair'];
+const SUBCATEGORIES: Record<string, string[]> = {
+  Electronics: ['Phones', 'Laptops', 'Tablets', 'TVs & Audio', 'Cameras', 'Accessories'],
+  Phones: ['Android Phones', 'iPhones', 'Feature Phones', 'Phone Accessories'],
+  Fashion: ['Men’s Clothing', 'Women’s Clothing', 'Bags', 'Watches', 'Accessories'],
+  Shoes: ['Sneakers', 'Formal Shoes', 'Sandals', 'Boots', 'Kids’ Shoes'],
+  'Home & Living': ['Furniture', 'Kitchen', 'Decor', 'Bedding', 'Lighting'],
+  Vehicles: ['Cars', 'Motorcycles', 'Commercial Vehicles', 'Vehicle Parts'],
+  Property: ['Houses for Sale', 'Houses for Rent', 'Apartments', 'Land', 'Commercial Property'],
+  Beauty: ['Skincare', 'Haircare', 'Makeup', 'Beauty Tools'],
+  Health: ['Fitness & Wellness', 'Personal Care', 'Health Equipment'],
+  Food: ['Packaged Food', 'Pantry', 'Eligible Groceries'],
+  Services: ['Repairs', 'Cleaning', 'Photography', 'Design', 'Other Services'],
+  Sports: ['Gym Equipment', 'Sportswear', 'Bicycles', 'Outdoor Gear'],
+  Books: ['Textbooks', 'Novels', 'Learning Materials', 'Stationery'],
+  Gaming: ['Consoles', 'Games', 'Controllers', 'Gaming PCs'],
+  'Art & Collectibles': ['Art', 'Musical Instruments', 'Collectibles', 'Crafts'],
+  Other: ['Other Items'],
+};
 
 export const CreateListingModal: React.FC = () => {
   const {
@@ -46,8 +65,12 @@ export const CreateListingModal: React.FC = () => {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<string>('');
   const [category, setCategory] = useState<ProductCategory>('Electronics');
+  const [subcategory, setSubcategory] = useState('Phones');
+  const [storeId, setStoreId] = useState('');
+  const [stores, setStores] = useState<MarketplaceStore[]>([]);
+  React.useEffect(() => { api.getStores().then((items) => setStores(items.filter((item) => item.ownerId === currentUser.id))).catch(() => setStores([])); }, [currentUser.id]);
   const [condition, setCondition] = useState<ProductCondition>('Like New');
-  const [location, setLocation] = useState(currentUser.location || 'San Francisco, CA');
+  const [location, setLocation] = useState(currentUser.location || '');
   const [images, setImages] = useState<string[]>([]);
 
   if (!createListingModalOpen) return null;
@@ -101,6 +124,8 @@ export const CreateListingModal: React.FC = () => {
       description: description.trim(),
       price: numPrice,
       category,
+      subcategory: subcategory || undefined,
+      storeId: storeId || undefined,
       condition,
       location: location.trim() || 'Online / Pickup',
       images,
@@ -111,6 +136,8 @@ export const CreateListingModal: React.FC = () => {
     setDescription('');
     setPrice('');
     setImages([]);
+    setSubcategory('');
+    setStoreId('');
     setCreateListingModalOpen(false);
   };
 
@@ -127,7 +154,7 @@ export const CreateListingModal: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                 Create Marketplace Listing
               </h3>
-              <p className="text-[11px] text-slate-400">List an item or service on RoseOne</p>
+              <p className="text-[11px] text-slate-400">List an item or service on Gistupp</p>
             </div>
           </div>
           <button
@@ -204,11 +231,11 @@ export const CreateListingModal: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Price (USD) *
+                Price (NGN) *
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  $
+                  ₦
                 </span>
                 <input
                   type="number"
@@ -216,7 +243,7 @@ export const CreateListingModal: React.FC = () => {
                   min="0"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0"
                   required
                   className="w-full pl-7 pr-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
                 />
@@ -232,7 +259,7 @@ export const CreateListingModal: React.FC = () => {
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value as ProductCategory)}
+                onChange={(e) => { const next = e.target.value as ProductCategory; setCategory(next); setSubcategory((SUBCATEGORIES[next] || ['Other'])[0]); }}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
               >
                 {CATEGORIES.map((c) => (
@@ -243,6 +270,12 @@ export const CreateListingModal: React.FC = () => {
               </select>
             </div>
 
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Subcategory</label>
+              <select value={subcategory} onChange={(e) => setSubcategory(e.target.value)} className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]">
+                {(SUBCATEGORIES[category] || ['Other']).map((sub) => <option key={sub} value={sub}>{sub}</option>)}
+              </select>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Condition
@@ -260,6 +293,15 @@ export const CreateListingModal: React.FC = () => {
               </select>
             </div>
           </div>
+
+          {stores.length > 0 && <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Store (optional)</label>
+            <select value={storeId} onChange={(e) => setStoreId(e.target.value)} className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]">
+              <option value="">Personal marketplace listing</option>
+              {stores.map((store) => <option key={store.id} value={store.id}>{store.name}</option>)}
+            </select>
+            <p className="text-[11px] text-slate-500 mt-1">Choose one of your stores to publish this product on its storefront.</p>
+          </div>}
 
           {/* Location */}
           <div>

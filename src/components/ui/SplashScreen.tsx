@@ -44,7 +44,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   return (
     <div
       role="status"
-      aria-label="Loading RoseOne"
+      aria-label="Loading Gistupp"
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FAF9FB] dark:bg-[#0E0A12] transition-opacity duration-300 ease-out select-none ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
@@ -59,7 +59,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       {/* Brand presentation */}
       <div className="relative flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
-        {/* RoseOne Symbol with pulse glow */}
+        {/* Gistupp Symbol with pulse glow */}
         <div className="relative mb-6">
           <div
             className="absolute inset-0 rounded-full blur-xl animate-pulse"
@@ -75,7 +75,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
         {/* Brand Wordmark */}
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
-          Rose
+          Gist
           <span
             className="bg-clip-text text-transparent"
             style={{
@@ -83,7 +83,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
                 'linear-gradient(90deg, var(--brand-accent, #E91E8C), var(--brand-accent-dark, #BE185D))',
             }}
           >
-            One
+            upp
           </span>
         </h1>
 
@@ -106,7 +106,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       {/* Footer subtle attribution */}
       <div className="absolute bottom-6 text-[11px] font-medium text-slate-400 dark:text-slate-400 tracking-wide">
-        RoseOne Ecosystem
+        Gistupp
       </div>
     </div>
   );

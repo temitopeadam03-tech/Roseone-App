@@ -33,17 +33,17 @@ export const AiAssistantModal: React.FC = () => {
     setTimeout(() => {
       let result = '';
       if (tone === 'creative') {
-        result = `✨ "${prompt}" — Crafted with clean pink aesthetics and human-centered design. Every detail brings warmth and intentional simplicity. #RoseOne #Design`;
+        result = `✨ "${prompt}" — Crafted with clean pink aesthetics and human-centered design. Every detail brings warmth and intentional simplicity. #Gistupp #Design`;
       } else if (tone === 'professional') {
         result = `Announcement: ${prompt}. Engineered with dedicated Android back-stack routing, zero dead clicks, and full WCAG contrast accessibility. #MobileArchitecture #Product`;
       } else if (tone === 'bold') {
-        result = `Real mobile experiences belong to native thumb zones. ${prompt} — Built with privacy-first standards and clean ergonomics. 🌸 #RoseOne #NextGen`;
+        result = `Real mobile experiences belong to native thumb zones. ${prompt} — Built with privacy-first standards and clean ergonomics. 🌸 #Gistupp #NextGen`;
       } else {
-        result = `🌸 Quick thoughts on ${prompt}: Love how clean the RoseOne layout feels! What are you creating today? Let me know 👇`;
+        result = `🌸 Quick thoughts on ${prompt}: Love how clean the Gistupp layout feels! What are you creating today? Let me know 👇`;
       }
       setGeneratedResult(result);
       setIsLoading(false);
-      showToast('RoseOne AI generated draft!', 'success');
+      showToast('Gistupp AI generated draft!', 'success');
     }, 600);
   };
 
@@ -66,7 +66,7 @@ export const AiAssistantModal: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                RoseOne AI Assistant
+                Gistupp AI Assistant
               </h3>
               <p className="text-[11px] text-slate-500">Caption suggestions & tone refiner</p>
             </div>
@@ -89,7 +89,7 @@ export const AiAssistantModal: React.FC = () => {
                 Privacy-First Guarantee:
               </span>{' '}
               <span className="text-slate-500">
-                RoseOne AI operates strictly with your explicit consent. Your drafts are never shared or used for public training.
+                Gistupp AI operates strictly with your explicit consent. Your drafts are never shared or used for public training.
               </span>
             </div>
           </div>
@@ -126,7 +126,7 @@ export const AiAssistantModal: React.FC = () => {
               rows={3}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="e.g. Announce our mobile app release on RoseOne..."
+              placeholder="e.g. Announce our mobile app release on Gistupp..."
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
             />
           </div>

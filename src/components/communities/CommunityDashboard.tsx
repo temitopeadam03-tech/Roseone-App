@@ -138,7 +138,7 @@ export const CommunityDashboard: React.FC<CommunityDashboardProps> = ({
   };
 
   const handleCopyInvite = () => {
-    const link = community.inviteLink || `https://rosesocial.net/c/${community.slug}`;
+    const link = community.inviteLink || `${window.location.origin}/c/${community.slug}`;
     navigator.clipboard?.writeText(link);
     showToast('Community invite link copied to clipboard!', 'success');
   };
