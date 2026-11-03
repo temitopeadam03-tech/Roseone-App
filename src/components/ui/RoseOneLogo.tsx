@@ -130,34 +130,12 @@ export const RoseOneSymbol: React.FC<{
         <circle cx="50" cy="50" r="38" fill="var(--brand-accent, #E91E8C)" opacity="0.18" filter={`url(#ambientGlow_${uniqueId})`} />
       )}
 
-      {/* Outer Left Petal: Gracefully rises and curls inwards */}
-      <path
-        d="M 45 16 C 30 18 16 32 16 50 C 16 68 28 82 46 84 C 48 84 50 82 50 80 C 50 76 46 74 43 72 C 30 65 26 53 30 40 C 33 30 38 23 45 16 Z"
-        fill={secondaryFill}
-      />
-
-      {/* Outer Right Petal: Unfolding upward, forming the protective rose chalice */}
-      <path
-        d="M 55 14 C 70 17 84 32 84 51 C 84 69 72 82 54 84 C 64 77 71 67 71 54 C 71 39 63 26 55 14 Z"
-        fill={primaryFill}
-      />
-
-      {/* Inner Petal Arch: Elegant curve that embraces the numeral 1 */}
-      <path
-        d="M 42 34 C 47 27 56 26 63 31 C 68 35 69 41 67 47 C 65 52 59 58 51 61 C 49 62 47 60 47 58 C 47 52 52 47 54 42 C 55 38 52 35 48 34 C 45 33 43 33 42 34 Z"
-        fill={highlightFill}
-      />
-
-      {/* Central "1" Spine: Architectural, upright, symbolizing "One" & Unity */}
-      <g>
-        {/* Modern angled flag & vertical column of the "1" */}
-        <path
-          d="M 45 22 L 53 22 C 54.5 22 55.5 23 56 24.5 L 59 31 C 59.8 32.5 58.8 34.5 57 34.5 L 53 34.5 L 53 79 C 53 80.5 51.5 82 50 82 L 47 82 C 45.5 82 44 80.5 44 79 L 44 34.5 L 41 34.5 C 39.5 34.5 38.2 33 39 31.5 L 42 24.5 C 42.6 23 43.6 22 45 22 Z"
-          fill={spineFill}
-        />
-        {/* Luminous Core Jewel Dot at Apex of the 1 */}
-        <circle cx="50" cy="27" r="1.8" fill={dotFill} />
-      </g>
+      {/* GistUpp brand mark: a bold conversation glyph wrapped by an open orbit. */}
+      <circle cx="50" cy="50" r="39" stroke={primaryFill} strokeWidth="7" strokeLinecap="round" strokeDasharray="196 52" transform="rotate(-38 50 50)" />
+      <path d="M67 34c-4-5-10-8-18-8-15 0-26 11-26 25s11 25 26 25c7 0 13-2 18-7" stroke={secondaryFill} strokeWidth="8" strokeLinecap="round" fill="none" />
+      <path d="M62 43H48c-5 0-8 3-8 7s3 7 8 7h8" stroke={highlightFill} strokeWidth="8" strokeLinecap="round" fill="none" />
+      <path d="M58 57l9 10" stroke={primaryFill} strokeWidth="7" strokeLinecap="round" />
+      <circle cx="76" cy="22" r="5" fill={dotFill} />
     </svg>
   );
 };
@@ -216,7 +194,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
           <span
             className={`font-black tracking-tight text-slate-900 dark:text-white ${currentSize.text} ${textClassName}`}
           >
-            Rose<span className="text-[#E91E8C]">One</span>
+            Gist<span className="text-[#E91E8C]">Upp</span>
           </span>
         </div>
       </div>
@@ -266,7 +244,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
       </div>
       <div className="flex flex-col leading-tight">
         <span
-          className={`font-extrabold tracking-tight text-slate-900 dark:text-white ${currentSize.text} ${textClassName}`}
+          className={`whitespace-nowrap min-w-max font-extrabold tracking-tight text-slate-900 dark:text-white ${currentSize.text} ${textClassName}`}
         >
           Gist<span className="bg-gradient-to-r from-[#E91E8C] to-[#BE185D] bg-clip-text text-transparent">upp</span>
         </span>

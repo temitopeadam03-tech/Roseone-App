@@ -1186,7 +1186,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isViewed: false,
     };
     setStories((prev) => [newStory, ...prev]);
-    showToast('Story published for 24 hours!', 'success');
+    void api.createStory(currentUser.id, mediaType, mediaUrl, caption, textContent, bgColor, audience, storyThumbnail)
+      .then((savedStory) => setStories((prev) => prev.map((story) => story.id === newStory.id ? savedStory : story)))
+      .then(() => showToast('Story published and synced across your devices!', 'success'))
+      .catch((error) => {
+        console.error('Story sync failed:', error);
+        setStories((prev) => prev.filter((story) => story.id !== newStory.id));
+        showToast('Story could not be synced. Please sign in again and retry.', 'error');
+      });
   };
 
   const markStoryViewed = (storyId: string) => {
@@ -2093,7 +2100,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isSaved: false,
     };
     setMarketplaceListings((prev) => [newListing, ...prev]);
-    showToast('Listing published to Rose Marketplace!', 'success');
+    void api.createListing(currentUser.id, data)
+      .then((savedListing) => setMarketplaceListings((prev) => prev.map((listing) => listing.id === newListing.id ? savedListing : listing)))
+      .then(() => showToast('Listing published and synced across your devices!', 'success'))
+      .catch((error) => {
+        console.error('Marketplace sync failed:', error);
+        setMarketplaceListings((prev) => prev.filter((listing) => listing.id !== newListing.id));
+        showToast('Listing could not be synced. Please sign in again and retry.', 'error');
+      });
   };
 
   const updateListing = (id: string, updates: Partial<MarketplaceListing>) => {
@@ -2357,8 +2371,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    refreshData();
-  }, []);
+    void refreshData();
+    const syncTimer = window.setInterval(() => { void refreshData(); }, 15000);
+    const onFocus = () => { void refreshData(); };
+    window.addEventListener('focus', onFocus);
+    return () => { window.clearInterval(syncTimer); window.removeEventListener('focus', onFocus); };
+  }, [currentUser.id]);
 
   const uploadMedia = async (dataUrl: string, filename?: string): Promise<string> => {
     try {

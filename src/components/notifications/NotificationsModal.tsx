@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   X,
   Bell,
@@ -27,6 +27,13 @@ export const NotificationsModal: React.FC = () => {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'requests'>('all');
+
+  useEffect(() => {
+    if (!notificationsModalOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setNotificationsModalOpen(false); };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [notificationsModalOpen, setNotificationsModalOpen]);
 
   if (!notificationsModalOpen) return null;
 
@@ -57,7 +64,7 @@ export const NotificationsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in select-none" onMouseDown={(event) => { if (event.target === event.currentTarget) setNotificationsModalOpen(false); }}>
       <div className="bg-white dark:bg-[#17131A] rounded-3xl w-full max-w-md max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800">
         {/* Header */}
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">

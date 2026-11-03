@@ -238,7 +238,6 @@ class ApiClient {
     const res = await this.request<{ success: boolean; story: Story }>('/api/stories', {
       method: 'POST',
       body: JSON.stringify({
-        userId,
         mediaType,
         mediaUrl,
         caption,
@@ -428,7 +427,7 @@ class ApiClient {
       '/api/marketplace',
       {
         method: 'POST',
-        body: JSON.stringify({ sellerId, data }),
+        body: JSON.stringify({ data }),
       }
     );
     return res.listing;

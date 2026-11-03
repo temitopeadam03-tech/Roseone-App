@@ -97,30 +97,55 @@ export const LiveView: React.FC = () => {
   const requestBroadcast = async () => {
     const authToken = localStorage.getItem('rose_auth_token');
     if (!authToken) { showToast('Please sign in before starting a live broadcast.', 'error'); return; }
-    setLiveStatus('connecting');
+    if (!title.trim() || title.trim().length < 3) { showToast('Add a live title with at least 3 characters.', 'info'); return; }
+    setLiveStatus('connecting'); setCameraError('');
+    let room: Room | null = null;
+    let sessionId: string | null = null;
     try {
-      streamRef.current?.getTracks().forEach(track => track.stop()); streamRef.current = null;
+      // Release the preview device before LiveKit opens its publishing tracks.
+      // If any later step fails, the catch block restores the local preview.
+      streamRef.current?.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+      setCameraReady(false);
       const response = await fetch('/api/live/start', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ title: title.trim(), category, visibility }) });
       const data = await response.json();
       if (!response.ok || !data.success) throw new Error(data.error || 'Live session could not be created.');
-      const room = new Room({ adaptiveStream: true, dynacast: true });
-      room.on(RoomEvent.ParticipantConnected, () => setViewerCount(room.numParticipants));
-      room.on(RoomEvent.ParticipantDisconnected, () => setViewerCount(room.numParticipants));
-      room.on(RoomEvent.TrackSubscribed, (track) => { if (track.kind === Track.Kind.Video && remoteVideoRef.current) track.attach(remoteVideoRef.current); });
+      sessionId = data.session.id;
+      room = new Room({ adaptiveStream: true, dynacast: true });
+      room.on(RoomEvent.ParticipantConnected, () => setViewerCount(room?.numParticipants || 0));
+      room.on(RoomEvent.ParticipantDisconnected, () => setViewerCount(room?.numParticipants || 0));
       room.on(RoomEvent.DataReceived, (payload) => { try { const item = JSON.parse(new TextDecoder().decode(payload)); if (item?.type === 'gistupp-live-chat') setChatMessages(old => [...old, item.message].slice(-100)); if (item?.type === 'gistupp-live-gift') showToast(`${item.gift} sent to the creator!`, 'success'); } catch {} });
-      room.on(RoomEvent.Disconnected, () => setLiveStatus('idle'));
+      room.on(RoomEvent.Disconnected, () => { if (liveStatus === 'live') setLiveStatus('idle'); });
       await room.connect(data.serverUrl, data.token);
       const tracks = await createLocalTracks({ audio: true, video: { facingMode: 'user' } });
-      for (const track of tracks) { await room.localParticipant.publishTrack(track); if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current); }
-      const publishResponse = await fetch(`/api/live/${data.session.id}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } });
-      if (!publishResponse.ok) throw new Error('Your media connected, but the room could not be published.');
-      setLiveRoom(room); setActiveSessionId(data.session.id); setLiveStatus('live'); setViewerCount(0);
-      showToast('You are live on Gistupp. Your room is connected.', 'success');
-    } catch (error) { setLiveStatus('error'); showToast(error instanceof Error ? error.message : 'Could not connect to LiveKit.', 'error'); }
+      for (const track of tracks) {
+        await room.localParticipant.publishTrack(track);
+        if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current);
+      }
+      const publishResponse = await fetch(`/api/live/${sessionId}/publish`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } });
+      const publishData = await publishResponse.json().catch(() => null);
+      if (!publishResponse.ok || !publishData?.success) throw new Error(publishData?.error || 'Your media connected, but the room could not be published.');
+      setLiveRoom(room); setActiveSessionId(sessionId); setLiveStatus('live'); setCameraReady(true); setViewerCount(room.numParticipants);
+      showToast('You are live on GistUpp. Your room is connected.', 'success');
+    } catch (error) {
+      try { room?.disconnect(); } catch {}
+      if (sessionId) fetch(`/api/live/${sessionId}/end`, { method: 'POST', headers: { Authorization: `Bearer ${authToken}` } }).catch(() => {});
+      setLiveRoom(null); setActiveSessionId(null); setLiveStatus('error'); setCameraReady(false);
+      // Restore the preview so a failed connection does not leave the creator with a dead camera.
+      try {
+        const restored = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
+        streamRef.current = restored;
+        if (videoRef.current) { videoRef.current.srcObject = restored; await videoRef.current.play().catch(() => {}); }
+        setCameraReady(true);
+      } catch (restoreError) {
+        setCameraError(restoreError instanceof Error ? restoreError.message : 'Camera could not be restored. Check browser permissions.');
+      }
+      showToast(error instanceof Error ? error.message : 'Could not connect to LiveKit.', 'error');
+    }
   };
   const joinLive = async (session: any) => {
     const token = localStorage.getItem('rose_auth_token');
-    if (!token) { showToast('Sign in to watch and chat in Gistupp Live.', 'info'); return; }
+    if (!token) { showToast('Sign in to watch and chat in GistUpp Live.', 'info'); return; }
     try {
       const response = await fetch(`/api/live/${session.id}/join`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
       const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || 'Could not join this live room.');
@@ -147,7 +172,7 @@ export const LiveView: React.FC = () => {
     liveRoom?.disconnect(); setLiveRoom(null); setActiveSessionId(null); setLiveStatus('idle'); setViewerCount(0); closeStudio(true); showToast('Your live session has ended.', 'success');
   };
   const requestGift = async () => {
-    if (!watchSession || !activeSessionId) { showToast('Gifts can be sent inside an active Gistupp live room.', 'info'); return; }
+    if (!watchSession || !activeSessionId) { showToast('Gifts can be sent inside an active GistUpp live room.', 'info'); return; }
     const token = localStorage.getItem('rose_auth_token');
     try { const response = await fetch(`/api/live/${activeSessionId}/gifts`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ giftCode: selectedGift.id, quantity: giftQuantity }) }); const data = await response.json(); if (!response.ok || !data.success) throw new Error(data.error || 'Gift could not be sent.'); setWalletBalance(data.receipt.remainingBalance); if (liveRoom) await liveRoom.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: 'gistupp-live-gift', gift: selectedGift.name, quantity: giftQuantity, coins: data.receipt.coins })), { reliable: true }); showToast(`${selectedGift.name} sent successfully!`, 'success'); setShowGiftPanel(false); }
     catch (error) { showToast(error instanceof Error ? error.message : 'Gift delivery failed.', 'error'); }
@@ -158,7 +183,7 @@ export const LiveView: React.FC = () => {
       <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full bg-pink-600/20 blur-3xl" />
       <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.15fr_.85fr] lg:items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-rose-200"><span className="h-2 w-2 rounded-full bg-rose-400"/> Gistupp Live Studio</div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-rose-400/30 bg-rose-500/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-rose-200"><span className="h-2 w-2 rounded-full bg-rose-400"/> GistUpp Live Studio</div>
           <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Your stage. Your people. Live.</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-white/65">Host conversations, performances, classes and community moments. Prepare your camera, audience settings, guest stage and chat experience before you go live.</p>
           <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-semibold text-white/70"><span className="rounded-full bg-white/10 px-3 py-1.5"><ShieldCheck className="mr-1 inline" size={13}/> Host controls</span><span className="rounded-full bg-white/10 px-3 py-1.5"><Gift className="mr-1 inline" size={13}/> Virtual gifts</span><span className="rounded-full bg-white/10 px-3 py-1.5"><Users className="mr-1 inline" size={13}/> Guest stage</span></div>
@@ -220,8 +245,7 @@ export const LiveView: React.FC = () => {
           <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-700"><p className="text-xs font-extrabold text-slate-800 dark:text-white">Room controls</p>{[{label:'Allow guest requests',value:allowGuests,set:setAllowGuests},{label:'Enable live chat',value:chatEnabled,set:setChatEnabled},{label:'Slow mode',value:slowMode,set:setSlowMode}].map(row=><label key={row.label} className="mt-3 flex items-center justify-between text-xs text-slate-600 dark:text-slate-300">{row.label}<input type="checkbox" checked={row.value} onChange={e=>row.set(e.target.checked)} className="h-4 w-4 accent-pink-600"/></label>)}</div>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Pinned welcome message<textarea value={pinnedMessage} onChange={e=>setPinnedMessage(e.target.value)} maxLength={180} rows={2} className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"/></label>
           <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Community goal<input value={goal} onChange={e=>setGoal(e.target.value)} maxLength={80} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-white"/></label>
-          <button onClick={requestBroadcast} disabled={!title.trim() || (!cameraReady && liveStatus !== 'live') || liveStatus === 'connecting' || liveStatus === 'live'} className="w-full rounded-xl bg-[#E91E8C] px-3 py-3 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40"><Radio size={14} className="mr-1 inline"/> {liveStatus === 'connecting' ? 'Connecting…' : liveStatus === 'live' ? 'You are live' : 'Go live'}</button>{liveStatus === 'live' && <button onClick={endBroadcast} className="w-full rounded-xl bg-slate-900 px-3 py-3 text-xs font-extrabold text-white">End broadcast</button>}
-          <p className="text-[10px] leading-4 text-slate-500">LiveKit connects your camera and microphone to the room. Add LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET to the server environment before going live.</p>
+          <button onClick={requestBroadcast} disabled={!title.trim() || (!cameraReady && liveStatus !== 'live') || liveStatus === 'connecting' || liveStatus === 'live'} className="w-full rounded-xl bg-[#E91E8C] px-3 py-3 text-xs font-extrabold text-white disabled:cursor-not-allowed disabled:opacity-40"><Radio size={14} className="mr-1 inline"/> {liveStatus === 'connecting' ? 'Starting your live…' : liveStatus === 'live' ? 'You are live' : 'Go Live'}</button>{liveStatus === 'live' && <button onClick={endBroadcast} className="w-full rounded-xl bg-slate-900 px-3 py-3 text-xs font-extrabold text-white">End broadcast</button>}
         </div>
       </div>
     </div></div>}

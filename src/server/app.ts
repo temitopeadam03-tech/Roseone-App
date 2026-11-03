@@ -174,11 +174,39 @@ export function createExpressApp() {
     return token.toJwt();
   };
 
-  app.get('/api/live/sessions', async (_req: Request, res: Response) => {
+  app.get('/api/live/sessions', async (req: Request, res: Response) => {
     if (!liveDb) return res.status(503).json({ success: false, error: 'Live database is not configured.' });
-    const { data, error } = await liveDb.from('roseone_live_sessions').select('id,host_id,room_name,title,category,visibility,status,viewer_count,peak_viewers,started_at,created_at').eq('status', 'live').eq('visibility', 'public').order('started_at', { ascending: false }).limit(40);
-    if (error) return res.status(500).json({ success: false, error: 'Could not load live sessions.' });
-    res.json({ success: true, sessions: data || [] });
+    try {
+      const columns = 'id,host_id,title,category,visibility,status,viewer_count,peak_viewers,started_at,created_at';
+      const { data: publicSessions, error: publicError } = await liveDb.from('roseone_live_sessions')
+        .select(columns).eq('status', 'live').eq('visibility', 'public')
+        .order('started_at', { ascending: false }).limit(40);
+      if (publicError) throw publicError;
+      let followedHostIds: string[] = [];
+      const viewer = getAuthUser(req);
+      if (viewer) {
+        const { data: follows, error: followError } = await liveDb.from('roseone_follows')
+          .select('following_id').eq('follower_id', viewer.id).eq('status', 'accepted');
+        if (followError) throw followError;
+        followedHostIds = (follows || []).map((row: any) => row.following_id).filter(Boolean);
+      }
+      let followerSessions: any[] = [];
+      if (followedHostIds.length) {
+        const { data, error } = await liveDb.from('roseone_live_sessions').select(columns)
+          .eq('status', 'live').eq('visibility', 'followers').in('host_id', followedHostIds)
+          .order('started_at', { ascending: false }).limit(40);
+        if (error) throw error;
+        followerSessions = data || [];
+      }
+      const sessions = [...(publicSessions || []), ...followerSessions]
+        .filter((session, index, all) => all.findIndex(item => item.id === session.id) === index)
+        .sort((a, b) => new Date(b.started_at || b.created_at).getTime() - new Date(a.started_at || a.created_at).getTime())
+        .slice(0, 40);
+      res.json({ success: true, sessions });
+    } catch (error) {
+      console.error('Live discovery failed:', error);
+      res.status(500).json({ success: false, error: 'Could not load live sessions.' });
+    }
   });
 
   app.post('/api/live/start', async (req: Request, res: Response) => {
@@ -389,7 +417,7 @@ export function createExpressApp() {
   });
 
   // --- Database snapshot / bootstrap ---
-  app.get('/api/bootstrap', (req: Request, res: Response) => {
+  app.get('/api/bootstrap', async (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
       if (!authUser) {
@@ -398,6 +426,19 @@ export function createExpressApp() {
       }
       const userId = authUser.id;
       const data = storage.getBootstrapData(userId);
+      // Supabase is the shared source of truth for cross-device Stories and Marketplace listings.
+      if (liveDb) {
+        const [{ data: sharedStories, error: storiesError }, { data: sharedListings, error: listingsError }] = await Promise.all([
+          liveDb.from('gistupp_shared_content').select('payload').eq('content_type', 'story').or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`).order('created_at', { ascending: false }).limit(500),
+          liveDb.from('gistupp_shared_content').select('payload').eq('content_type', 'marketplace_listing').order('created_at', { ascending: false }).limit(1000),
+        ]);
+        if (storiesError || listingsError) {
+          console.error('Shared content read failed:', storiesError || listingsError);
+        } else {
+          data.stories = (sharedStories || []).map((row: any) => row.payload).filter(Boolean);
+          data.marketplaceListings = (sharedListings || []).map((row: any) => row.payload).filter(Boolean);
+        }
+      }
       res.json({ success: true, data });
     } catch (err: any) {
       console.error('Error in /api/bootstrap:', err);
@@ -406,7 +447,7 @@ export function createExpressApp() {
   });
 
   // --- Secure Media Upload ---
-  app.post('/api/upload', (req: Request, res: Response) => {
+  app.post('/api/upload', async (req: Request, res: Response) => {
     try {
       const { dataUrl } = req.body;
 
@@ -460,9 +501,32 @@ export function createExpressApp() {
       }
 
       const buffer = Buffer.from(base64Data, 'base64');
-      const uniqueName = `rose_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const authUser = getAuthUser(req);
+      if (!authUser) {
+        res.status(401).json({ success: false, error: 'Sign in before uploading media.' });
+        return;
+      }
+      const uniqueName = `${authUser.id}/${crypto.randomUUID()}.${ext}`;
 
-      // Write file if disk is accessible; otherwise graceful dataUrl fallback for Netlify
+      // Persist uploads in Supabase Storage so media URLs survive deploys and work on every device.
+      if (liveDb) {
+        const bucket = mimeType.startsWith('image/') ? 'gistupp-public' : 'gistupp-media';
+        const { error: uploadError } = await liveDb.storage.from(bucket).upload(uniqueName, buffer, {
+          contentType: mimeType,
+          upsert: false,
+          cacheControl: '31536000',
+        });
+        if (uploadError) throw uploadError;
+        const publicResult = liveDb.storage.from(bucket).getPublicUrl(uniqueName);
+        const url = bucket === 'gistupp-public'
+          ? publicResult.data.publicUrl
+          : (await liveDb.storage.from(bucket).createSignedUrl(uniqueName, 60 * 60 * 24 * 7)).data?.signedUrl;
+        if (!url) throw new Error('Could not create a media URL.');
+        res.json({ success: true, url, filename: uniqueName, size: buffer.length, mimeType });
+        return;
+      }
+
+      // Local-only fallback for development when Supabase service credentials are unavailable.
       try {
         if (!fs.existsSync(uploadsDir)) {
           fs.mkdirSync(uploadsDir, { recursive: true });
@@ -695,18 +759,23 @@ export function createExpressApp() {
     }
   });
 
-  app.post('/api/stories', (req: Request, res: Response) => {
+  app.post('/api/stories', async (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
-      const { mediaUrl, mediaType, caption, duration } = req.body;
+      const { mediaUrl, mediaType, caption, textContent, bgColor, audience, storyThumbnail } = req.body;
       const userId = authUser?.id;
-
       if (!userId || !mediaUrl) {
-        res.status(400).json({ success: false, error: 'userId and mediaUrl are required' });
+        res.status(400).json({ success: false, error: 'Authenticated user and mediaUrl are required' });
         return;
       }
-
-      const story = storage.createStory(userId, mediaUrl, mediaType || 'image', caption, duration);
+      const story = storage.createStory(userId, mediaType || 'photo', mediaUrl, caption, textContent, bgColor, audience || 'everyone', storyThumbnail);
+      if (liveDb) {
+        const { error } = await liveDb.from('gistupp_shared_content').upsert({
+          content_type: 'story', content_id: story.id, owner_id: userId, payload: story,
+          expires_at: new Date(story.createdTimestamp + (story.expiresInHours || 24) * 3600000).toISOString(),
+        }, { onConflict: 'content_type,content_id' });
+        if (error) throw error;
+      }
       res.status(201).json({ success: true, story });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -1069,7 +1138,7 @@ export function createExpressApp() {
   });
 
   // --- Marketplace ---
-  app.post('/api/marketplace', (req: Request, res: Response) => {
+  app.post('/api/marketplace', async (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
       const { data } = req.body;
@@ -1080,6 +1149,12 @@ export function createExpressApp() {
         return;
       }
       const listing = storage.createListing(sellerId, data);
+      if (liveDb) {
+        const { error } = await liveDb.from('gistupp_shared_content').upsert({
+          content_type: 'marketplace_listing', content_id: listing.id, owner_id: sellerId, payload: listing, expires_at: null,
+        }, { onConflict: 'content_type,content_id' });
+        if (error) throw error;
+      }
       res.status(201).json({ success: true, listing });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });

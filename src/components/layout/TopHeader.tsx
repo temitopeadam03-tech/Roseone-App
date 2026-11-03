@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Menu,
   Plus,
@@ -31,6 +31,18 @@ export const TopHeader: React.FC = () => {
   } = useApp();
 
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) setProfileMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setProfileMenuOpen(false); };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => { document.removeEventListener('pointerdown', onPointerDown); document.removeEventListener('keydown', onKeyDown); };
+  }, [profileMenuOpen]);
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6">
@@ -53,7 +65,7 @@ export const TopHeader: React.FC = () => {
               setActiveView('feed');
               setActiveTab('home');
             }}
-            className="flex items-center shrink-0 cursor-pointer"
+            className="flex min-w-max items-center shrink-0 cursor-pointer"
             aria-label="Gistupp Home"
           >
             <RoseOneLogo variant="horizontal" size="md" showTagline={false} />
@@ -138,7 +150,7 @@ export const TopHeader: React.FC = () => {
 
           {/* Notifications Button */}
           <button
-            onClick={() => setNotificationsModalOpen(true)}
+            onClick={() => { setProfileMenuOpen(false); setNotificationsModalOpen(value => !value); }}
             className="relative min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-600 dark:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             title="Notifications"
           >
@@ -158,9 +170,10 @@ export const TopHeader: React.FC = () => {
           </button>
 
           {/* Profile Menu Trigger */}
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              aria-expanded={profileMenuOpen}
+              onClick={() => setProfileMenuOpen(value => !value)}
               className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               aria-label="User account menu"
             >
