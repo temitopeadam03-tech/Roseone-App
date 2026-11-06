@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   User,
   Post,
@@ -132,6 +133,11 @@ const cleanLegacyDatabase = (source: DatabaseSchema): DatabaseSchema => {
 export class PersistentStorage {
   private db: DatabaseSchema;
   private saveTimeout: NodeJS.Timeout | null = null;
+  private durableClient: SupabaseClient | null = null;
+  private durableInitialized = false;
+  private durableInitPromise: Promise<void> | null = null;
+  private durableSavePromise: Promise<void> = Promise.resolve();
+  private durableDirty = false;
 
   constructor() {
     this.db = this.loadDatabase();
@@ -172,13 +178,115 @@ export class PersistentStorage {
     }
   }
 
-  public schedulePersist(): void {
+  /**
+   * Load the shared app snapshot before serving requests. Supabase is the
+   * durable source of truth; the JSON file remains a local fallback/cache.
+   * Credentials and legacy sessions are deliberately never uploaded.
+   */
+  public async initializeDurable(): Promise<void> {
+    if (this.durableInitialized) return;
+    if (this.durableInitPromise) return this.durableInitPromise;
+
+    this.durableInitPromise = (async () => {
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SECRET_KEY;
+      if (!url || !key) {
+        const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
+        const message = '[storage] Durable storage is unavailable: set SUPABASE_URL and SUPABASE_SECRET_KEY on the server. Local JSON is not durable on Render.';
+        if (isProduction) throw new Error(message);
+        console.warn(`${message} Using local JSON only in development.`);
+        this.durableInitialized = true;
+        return;
+      }
+
+      this.durableClient = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data, error } = await this.durableClient
+        .from('gistupp_app_state')
+        .select('state')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw new Error(`Could not load shared app data from Supabase: ${error.message}`);
+
+      if (data?.state && typeof data.state === 'object') {
+        const remote = data.state as Partial<DatabaseSchema>;
+        const localCredentials = this.db.userCredentials || {};
+        const localSessions = this.db.sessions || {};
+        this.db = cleanLegacyDatabase({
+          ...getInitialDatabase(),
+          ...remote,
+          userCredentials: localCredentials,
+          sessions: localSessions,
+        } as DatabaseSchema);
+        this.persistSync(this.db);
+        console.info('[storage] Shared app data loaded from Supabase.');
+      } else {
+        // First-time bootstrap: preserve any existing local data instead of
+        // replacing it with an empty snapshot.
+        await this.persistDurable();
+        console.info('[storage] Initial shared app snapshot created in Supabase.');
+      }
+      this.durableInitialized = true;
+    })();
+
+    try {
+      await this.durableInitPromise;
+    } catch (error) {
+      this.durableInitPromise = null;
+      throw error;
+    }
+  }
+
+  private async persistDurable(): Promise<void> {
+    if (!this.durableClient) return;
+    const { userCredentials: _credentials, sessions: _sessions, ...safeState } = this.db;
+    const { error } = await this.durableClient.from('gistupp_app_state').upsert({
+      id: 1,
+      state: safeState,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'id' });
+    if (error) {
+      throw new Error(`[storage] Supabase durable save failed: ${error.message}`);
+    }
+  }
+
+  private queueDurableSave(): void {
+    this.durableDirty = false;
+    // Recover the queue after a transient database failure so a later user
+    // action can retry instead of inheriting a permanently rejected promise.
+    const nextSave = this.durableSavePromise
+      .catch(() => undefined)
+      .then(() => this.persistDurable());
+    this.durableSavePromise = nextSave;
+    void nextSave.catch((error) => {
+      this.durableDirty = true;
+      console.error('[storage] Durable save queue failed:', error);
+    });
+  }
+
+  /** Wait until the latest mutation has reached Supabase before sending its API response. */
+  public async flushDurable(): Promise<void> {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
     }
+    if (this.durableDirty) {
+      this.persistSync(this.db);
+      this.queueDurableSave();
+    }
+    await this.durableSavePromise;
+  }
+
+  public schedulePersist(): void {
+    this.durableDirty = true;
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
     this.saveTimeout = setTimeout(() => {
       this.persistSync(this.db);
       this.saveTimeout = null;
+      // Serialize writes from this process so an older snapshot cannot finish
+      // after a newer one. API responses also await flushDurable().
+      this.queueDurableSave();
     }, 150);
   }
 

@@ -9,6 +9,43 @@ import { AccessToken } from 'livekit-server-sdk';
 export function createExpressApp() {
   const app = express();
 
+  // Hydrate the shared database before authentication or API handlers can
+  // read/write state. This makes every device use the same durable snapshot.
+  app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+    try {
+      await storage.initializeDurable();
+      next();
+    } catch (error) {
+      console.error('[storage] Durable database initialization failed:', error);
+      next(error);
+    }
+  });
+
+  // Do not acknowledge a write until the shared Supabase snapshot is durable.
+  // This closes the previous 150ms window in which a restart could lose a post/message.
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    const originalEnd = res.end.bind(res);
+    let endStarted = false;
+    (res as any).end = (...args: any[]) => {
+      if (endStarted) return res;
+      endStarted = true;
+      void storage.flushDurable().then(() => {
+        originalEnd(...args);
+      }).catch((error) => {
+        console.error('[storage] Refusing to acknowledge an unpersisted change:', error);
+        if (!res.headersSent) {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          originalEnd(JSON.stringify({ success: false, error: 'Your change could not be saved. Please retry.' }));
+        } else {
+          originalEnd(...args);
+        }
+      });
+      return res;
+    };
+    next();
+  });
+
   // Handle Netlify Functions path rewriting if invoked via /.netlify/functions/api
   app.use((req: Request, _res: Response, next: NextFunction) => {
     if (req.url.startsWith('/.netlify/functions/api')) {

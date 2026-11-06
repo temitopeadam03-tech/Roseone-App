@@ -726,11 +726,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       tags: tags || [],
     };
 
+    // Keep the post visible optimistically, but always persist it through the
+    // authenticated API. Previously this function only updated React state;
+    // the 15-second bootstrap refresh then replaced the feed with server data,
+    // making the post appear to disappear.
     setPosts((prev) => [newPost, ...prev]);
 
-    // Increment current user's genuine post count
-    updateCurrentUser({ postsCount: currentUser.postsCount + 1 });
-    showToast('Post published to Gistupp!', 'success');
+    void api.createPost(currentUser.id, content, media, pollData, tags, communityId)
+      .then((savedPost) => {
+        setPosts((prev) => [
+          savedPost,
+          ...prev.filter((post) => post.id !== newPost.id && post.id !== savedPost.id),
+        ]);
+        if (savedPost.author?.postsCount !== undefined) {
+          updateCurrentUser({ postsCount: savedPost.author.postsCount });
+        }
+        showToast('Post published and saved to Gistupp!', 'success');
+      })
+      .catch((error) => {
+        console.error('Post publishing failed:', error);
+        setPosts((prev) => prev.filter((post) => post.id !== newPost.id));
+        showToast('Your post could not be saved. Please check your connection and try again.', 'error');
+      });
   };
 
   const [reshareModalPost, setReshareModalPost] = useState<Post | null>(null);

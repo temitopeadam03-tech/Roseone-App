@@ -130,12 +130,24 @@ export const RoseOneSymbol: React.FC<{
         <circle cx="50" cy="50" r="38" fill="var(--brand-accent, #E91E8C)" opacity="0.18" filter={`url(#ambientGlow_${uniqueId})`} />
       )}
 
-      {/* GistUpp brand mark: a bold conversation glyph wrapped by an open orbit. */}
-      <circle cx="50" cy="50" r="39" stroke={primaryFill} strokeWidth="7" strokeLinecap="round" strokeDasharray="196 52" transform="rotate(-38 50 50)" />
-      <path d="M67 34c-4-5-10-8-18-8-15 0-26 11-26 25s11 25 26 25c7 0 13-2 18-7" stroke={secondaryFill} strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M62 43H48c-5 0-8 3-8 7s3 7 8 7h8" stroke={highlightFill} strokeWidth="8" strokeLinecap="round" fill="none" />
-      <path d="M58 57l9 10" stroke={primaryFill} strokeWidth="7" strokeLinecap="round" />
-      <circle cx="76" cy="22" r="5" fill={dotFill} />
+      {/* GistUpp mark: two connected speech forms forming a confident G. */}
+      <path
+        d="M72 29.5A31 31 0 1 0 79 53"
+        stroke={primaryFill}
+        strokeWidth="12"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M72 29.5H51.5C39.6 29.5 31 38.2 31 50s8.6 20.5 20.5 20.5H69V52H53"
+        stroke={secondaryFill}
+        strokeWidth="11"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path d="M62 70.5 76 83" stroke={primaryFill} strokeWidth="9" strokeLinecap="round" />
+      <circle cx="77" cy="22" r="5.5" fill={dotFill} />
     </svg>
   );
 };

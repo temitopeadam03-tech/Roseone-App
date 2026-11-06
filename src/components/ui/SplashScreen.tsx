@@ -59,18 +59,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       {/* Brand presentation */}
       <div className="relative flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
-        {/* Gistupp Symbol with pulse glow */}
-        <div className="relative mb-6">
-          <div
-            className="absolute inset-0 rounded-full blur-xl animate-pulse"
-            style={{ backgroundColor: 'var(--brand-accent-soft, rgba(233, 30, 140, 0.2))' }}
-          />
-          <div
-            className="relative p-4 rounded-3xl bg-white dark:bg-[#18131F] shadow-xl border"
-            style={{ borderColor: 'var(--brand-accent-soft, rgba(233, 30, 140, 0.3))' }}
-          >
-            <RoseOneSymbol size={80} animated={false} glow={true} />
-          </div>
+        {/* Clean standalone app mark */}
+        <div className="relative mb-7">
+          <RoseOneSymbol size={104} animated={false} glow={false} />
         </div>
 
         {/* Brand Wordmark */}
@@ -89,7 +80,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
         {/* Tagline */}
         <p className="text-xs sm:text-sm font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-400 mb-8">
-          Everything, Connected.
+          Your world. One conversation.
         </p>
 
         {/* Subtle, refined loading bar */}
