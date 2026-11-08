@@ -46,6 +46,18 @@ const MainContent: React.FC = () => {
     createCommunityInitialType,
   } = useApp();
 
+  // Keep Android/browser Back navigation inside GistUpp; never sign out on back.
+  React.useEffect(() => {
+    const pushAppHistory = () => window.history.pushState({ gistupp: true }, '', window.location.href);
+    pushAppHistory();
+    const handleBack = () => {
+      pushAppHistory();
+      setActiveView('feed');
+      setActiveTab('home');
+    };
+    window.addEventListener('popstate', handleBack);
+    return () => window.removeEventListener('popstate', handleBack);
+  }, [setActiveView, setActiveTab]);
   React.useEffect(() => {
     const handleHome = () => {
       setActiveTab('home');
