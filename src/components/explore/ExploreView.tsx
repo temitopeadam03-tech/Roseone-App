@@ -53,7 +53,7 @@ export const ExploreView: React.FC = () => {
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto no-scrollbar">
           {([{id:'discover',label:'Discover',icon:Compass},{id:'circle',label:'Circle',icon:Users},{id:'following',label:'Following',icon:Users},{id:'trending',label:'Trending',icon:TrendingUp}] as const).map(t => <button key={t.id} onClick={() => switchTab(t.id)} className={`shrink-0 border-b-2 px-1 pb-1 text-[11px] font-semibold transition-colors ${activeTab===t.id?'border-white text-white':'border-transparent text-white/65'}`}>{t.label}</button>)}
         </div>
-        <button onClick={() => setCreatePostModalOpen(true)} aria-label="Upload video" title="Upload video" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Upload size={16}/></button>
+        <button onClick={() => { const next = !autoNext; setAutoNext(next); localStorage.setItem('roseone_video_auto_next', String(next)); }} aria-label={autoNext ? 'Turn off autoplay next' : 'Turn on autoplay next'} title={autoNext ? 'Autoplay next: on' : 'Autoplay next: off'} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Settings2 size={15}/></button><button onClick={() => setCreatePostModalOpen(true)} aria-label="Upload video" title="Upload video" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Upload size={16}/></button>
       </div>
       <div className="mt-2 flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 backdrop-blur-sm">
         <Search size={14} className="shrink-0 text-white/70"/><input value={searchQuery} onChange={e => {setSearchQuery(e.target.value);setActiveIndex(0)}} placeholder="Search videos, creators, hashtags" className="min-w-0 flex-1 bg-transparent text-[11px] text-white outline-none placeholder:text-white/60"/>
@@ -64,7 +64,7 @@ export const ExploreView: React.FC = () => {
     {current && <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/30 to-transparent px-3 pb-4 pt-20">
       <div className="flex items-end gap-3">
         <div className="min-w-0 flex-1">
-          <button onClick={() => openUserProfile(current.author)} className="mb-2 flex items-center gap-2 text-left"><Avatar src={current.author.avatar} name={current.author.name} size="sm"/><span className="text-xs font-bold">@{current.author.handle}</span></button>
+          <div className="mb-2 flex items-center gap-2"><button onClick={() => openUserProfile(current.author)} className="flex items-center gap-2 text-left"><Avatar src={current.author.avatar} name={current.author.name} size="sm"/><span className="text-xs font-bold">@{current.author.handle}</span></button>{current.author.id !== currentUser.id && <button onClick={() => toggleFollowUser(current.author.id)} className="rounded-full border border-white/60 px-2 py-1 text-[10px] font-semibold">{currentUser.following?.includes(current.author.id) ? <UserCheck size={13}/> : <UserPlus size={13}/>} {currentUser.following?.includes(current.author.id) ? 'Following' : 'Follow'}</button>}</div>
           {current.content && <p className="line-clamp-3 text-xs leading-5">{current.content}</p>}
           {!!current.tags?.length && <p className="mt-1 text-[10px] text-white/80">{current.tags.map(t=>t.startsWith('#')?t:`#${t}`).join(' ')}</p>}
           <p className="mt-2 text-[10px] text-white/65">{activeIndex + 1} / {filtered.length}</p>
