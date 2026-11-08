@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Lock, Mail, User as UserIcon, AtSign, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../../lib/supabase';
 import { useApp } from '../../context/AppContext';
 
 export const AuthModal: React.FC = () => {
@@ -22,13 +22,10 @@ export const AuthModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
-  const configuredSupabaseUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim();
-  const supabaseUrl = configuredSupabaseUrl && /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(configuredSupabaseUrl) ? configuredSupabaseUrl : '';
-  const supabaseKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined)?.trim();
-  const supabase = supabaseUrl && supabaseKey && !supabaseKey.includes('YOUR_') ? createClient(supabaseUrl, supabaseKey) : null;
+
 
   const handleGoogleSignIn = async () => {
-    if (!supabase) { setError('Google sign-in is not configured on this computer. Open the project .env file and set VITE_SUPABASE_URL to https://pqmoramemqsibwfwdhna.supabase.co and VITE_SUPABASE_PUBLISHABLE_KEY to your Supabase publishable key, then restart npm run dev.'); return; }
+    if (!supabase) { setError('Google sign-in is not configured. Please contact the app administrator.'); return; }
     setIsLoading(true); setError(null);
     const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
     setIsLoading(false);
@@ -38,7 +35,7 @@ export const AuthModal: React.FC = () => {
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail.trim()) { setError('Enter the email address for your account.'); return; }
-    if (!supabase) { setError('Password recovery is not configured. Add the Supabase frontend environment variables in Netlify.'); return; }
+    if (!supabase) { setError('Password recovery is not configured. Please contact the app administrator.'); return; }
     setIsLoading(true); setError(null); setSupabaseMessage('');
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), { redirectTo: `${window.location.origin}/reset-password` });
     setIsLoading(false);
