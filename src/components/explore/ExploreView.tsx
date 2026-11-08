@@ -3,7 +3,7 @@ import { Search, Compass, Users, TrendingUp, Heart, MessageCircle, Repeat2, Book
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 
-const isVideoSource = (src: string) => /^data:video\\//i.test(src) || /\\.(mp4|webm|mov|m4v|ogv)(\\?|#|$)/i.test(src) || /video/i.test(src);
+const isVideoSource = (src: string) => /^data:video\//i.test(src) || /\.(mp4|webm|mov|m4v|ogv)(\\?|#|$)/i.test(src) || /video/i.test(src);
 type FeedMode = 'discover' | 'circle' | 'following' | 'trending';
 
 export const ExploreView: React.FC = () => {
