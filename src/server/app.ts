@@ -801,7 +801,7 @@ export function createExpressApp() {
       const authUser = getAuthUser(req);
       const { mediaUrl, mediaType, caption, textContent, bgColor, audience, storyThumbnail } = req.body;
       const userId = authUser?.id;
-      if (!userId || !mediaUrl) {
+      if (!userId || (!mediaUrl && mediaType !== 'text')) {
         res.status(400).json({ success: false, error: 'Authenticated user and mediaUrl are required' });
         return;
       }
