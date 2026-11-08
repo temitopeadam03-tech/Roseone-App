@@ -107,7 +107,7 @@ interface AppContextType {
     bgColor?: string,
     audience?: 'everyone' | 'followers' | 'close-friends',
     storyThumbnail?: string
-  ) => void;
+  ) => Promise<void>;
   markStoryViewed: (storyId: string) => void;
   reactToStory: (storyId: string, emoji: string) => void;
   addStoryComment: (storyId: string, text?: string, voiceUrl?: string, voiceDuration?: number) => void;
@@ -1207,7 +1207,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [stories]);
 
-  const createStory = (
+  const createStory = async (
     mediaType: 'photo' | 'video' | 'text',
     mediaUrl: string,
     caption?: string,
@@ -1238,14 +1238,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       isViewed: false,
     };
     setStories((prev) => [newStory, ...prev]);
-    void api.createStory(currentUser.id, mediaType, mediaUrl, caption, textContent, bgColor, audience, storyThumbnail)
-      .then((savedStory) => setStories((prev) => prev.map((story) => story.id === newStory.id ? savedStory : story)))
-      .then(() => showToast('Story published and synced across your devices!', 'success'))
-      .catch((error) => {
-        console.error('Story sync failed:', error);
-        setStories((prev) => prev.filter((story) => story.id !== newStory.id));
-        showToast('Story could not be synced. Please sign in again and retry.', 'error');
-      });
+    try {
+      const savedStory = await api.createStory(currentUser.id, mediaType, mediaUrl, caption, textContent, bgColor, audience, storyThumbnail);
+      setStories((prev) => prev.map((story) => story.id === newStory.id ? savedStory : story));
+      showToast('Story published and synced across your devices!', 'success');
+    } catch (error) {
+      console.error('Story sync failed:', error);
+      setStories((prev) => prev.filter((story) => story.id !== newStory.id));
+      throw error;
+    }
   };
 
   const markStoryViewed = (storyId: string) => {
