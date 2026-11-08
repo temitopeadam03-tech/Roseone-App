@@ -123,6 +123,7 @@ const MainContent: React.FC = () => {
   };
 
   const isWideFullView =
+    activeTab === 'explore' ||
     activeTab === 'market' ||
     activeTab === 'live' ||
     activeView === 'marketplace' ||
