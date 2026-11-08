@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Users,
-  Video,
   Sparkles,
   Briefcase,
   Bookmark,
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
-import { RoseOneLogo } from '../ui/RoseOneLogo';
 
 export const AndroidDrawerMenu: React.FC = () => {
   const {
@@ -72,14 +70,6 @@ export const AndroidDrawerMenu: React.FC = () => {
           icon: <Users className="w-5 h-5 text-[#E91E8C]" />,
           action: () => {
             setActiveView('communities');
-          },
-        },
-        {
-          id: 'reels',
-          label: 'Videos & Clips',
-          icon: <Video className="w-5 h-5 text-[#E91E8C]" />,
-          action: () => {
-            setActiveView('reels');
           },
         },
         {
@@ -299,7 +289,7 @@ export const AndroidDrawerMenu: React.FC = () => {
             <span>Sign Out</span>
           </button>
           <div className="flex items-center justify-between pt-2 px-1 border-t border-slate-100 dark:border-slate-800/60">
-            <RoseOneLogo variant="compact" size="xs" />
+            <span className="text-[10px] font-semibold text-slate-500">GistUpp</span>
             <span className="text-[10px] font-mono text-slate-400">v2.4.0</span>
           </div>
         </div>
