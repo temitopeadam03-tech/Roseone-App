@@ -46,7 +46,7 @@ export const TopHeader: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 px-4 sm:px-6">
-      <div className="max-w-6xl mx-auto h-14 flex items-center justify-between gap-4">
+      <div className="w-full max-w-[1800px] mx-auto h-16 flex items-center justify-between gap-3 sm:gap-5">
         {/* Zone 1: Gistupp Brand Identity */}
         <div className="flex items-center gap-3">
           {/* Mobile drawer trigger */}
@@ -68,7 +68,7 @@ export const TopHeader: React.FC = () => {
             className="flex min-w-max items-center shrink-0 cursor-pointer"
             aria-label="Gistupp Home"
           >
-            <RoseOneLogo variant="horizontal" size="md" showTagline={false} />
+            <RoseOneLogo variant="symbol" size="lg" showTagline={false} />
           </a>
         </div>
 
