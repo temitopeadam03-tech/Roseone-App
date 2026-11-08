@@ -40,8 +40,8 @@ export const CreateStoryModal: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 20 * 1024 * 1024) {
-      showToast('File size must be under 20MB', 'error');
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('File size must be under 15MB', 'error');
       return;
     }
 
@@ -179,7 +179,7 @@ export const CreateStoryModal: React.FC = () => {
                     Upload Photo or Video
                   </span>
                   <span className="text-[11px] text-slate-400 mt-1">
-                    Supports JPG, PNG, MP4 up to 20MB
+                    Supports JPG, PNG, MP4 up to 15MB
                   </span>
                   <input
                     type="file"
