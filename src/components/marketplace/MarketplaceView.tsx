@@ -366,7 +366,7 @@ export const MarketplaceView: React.FC = () => {
                     <img
                       src={item.images[0]}
                       alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-contain bg-slate-100 dark:bg-slate-900"
                     />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-gradient-to-tr from-[#BE185D]/10 to-[#E91E8C]/10">
