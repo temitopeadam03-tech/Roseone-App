@@ -59,6 +59,7 @@ export const CreateListingModal: React.FC = () => {
     createListing,
     currentUser,
     showToast,
+    uploadMedia,
   } = useApp();
 
   const [title, setTitle] = useState('');
@@ -72,31 +73,42 @@ export const CreateListingModal: React.FC = () => {
   const [condition, setCondition] = useState<ProductCondition>('Like New');
   const [location, setLocation] = useState(currentUser.location || '');
   const [images, setImages] = useState<string[]>([]);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   if (!createListingModalOpen) return null;
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
     if (images.length + files.length > 6) {
       showToast('Maximum 6 photos per listing', 'error');
+      e.target.value = '';
       return;
     }
-
-    Array.from(files).forEach((file) => {
-      if (file.size > 8 * 1024 * 1024) {
-        showToast('Each photo must be under 8MB', 'error');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setImages((prev) => [...prev, reader.result as string]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    if (files.some((file) => file.size > 8 * 1024 * 1024)) {
+      showToast('Each photo must be under 8MB', 'error');
+      e.target.value = '';
+      return;
+    }
+    setIsUploadingImages(true);
+    try {
+      const uploaded = await Promise.all(files.map((file) => new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Could not read one of the selected photos.'));
+        reader.onload = async () => {
+          if (typeof reader.result !== 'string') return reject(new Error('Invalid photo file.'));
+          try { resolve(await uploadMedia(reader.result, file.name)); }
+          catch (error) { reject(error); }
+        };
+        reader.readAsDataURL(file);
+      })));
+      setImages((prev) => [...prev, ...uploaded]);
+    } catch (error: any) {
+      showToast(error?.message || 'Photo upload failed. Please retry.', 'error');
+    } finally {
+      setIsUploadingImages(false);
+      e.target.value = '';
+    }
   };
 
   const handleRemoveImage = (index: number) => {
@@ -178,7 +190,7 @@ export const CreateListingModal: React.FC = () => {
                   key={idx}
                   className="relative h-24 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 group"
                 >
-                  <img src={img} alt="Product" className="w-full h-full object-cover" />
+                  <img src={img} alt="Product" className="w-full h-full object-contain bg-slate-100 dark:bg-slate-900" />
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(idx)}
