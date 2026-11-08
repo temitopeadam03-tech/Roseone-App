@@ -1,222 +1,42 @@
 import React from 'react';
-import {
-  Home,
-  Compass,
-  MessageCircle,
-  Bell,
-  Users,
-  Briefcase,
-  Bookmark,
-  Settings,
-  Sparkles,
-  ShieldAlert,
-  PlusCircle,
-  ShoppingBag,
-  Radio,
-} from 'lucide-react';
+import { Home, Compass, MessageCircle, ShoppingBag, Radio } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 
 export const DesktopSidebar: React.FC = () => {
-  const {
-    activeTab,
-    setActiveTab,
-    activeView,
-    setActiveView,
-    setCreatePostModalOpen,
-    setAiAssistantModalOpen,
-    setModerationModalOpen,
-    setNotificationsModalOpen,
-    unreadNotificationsCount,
-    currentUser,
-    conversations,
-  } = useApp();
-
-  const totalUnreadMessages = conversations.reduce((acc, c) => acc + c.unreadCount, 0);
-
-  const navItems = [
-    {
-      id: 'feed',
-      label: 'Home Feed',
-      icon: <Home className="w-5 h-5" />,
-      action: () => {
-        setActiveView('feed');
-        setActiveTab('home');
-      },
-      isActive: activeView === 'feed' && activeTab === 'home',
-    },
-    {
-      id: 'explore',
-      label: 'Explore',
-      icon: <Compass className="w-5 h-5" />,
-      action: () => {
-        setActiveView('feed');
-        setActiveTab('explore');
-      },
-      isActive: activeTab === 'explore',
-    },
-    {
-      id: 'live',
-      label: 'Live',
-      icon: <Radio className="w-5 h-5" />,
-      action: () => { setActiveView('feed'); setActiveTab('live'); },
-      isActive: activeTab === 'live',
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      icon: <MessageCircle className="w-5 h-5" />,
-      badge: totalUnreadMessages > 0 ? totalUnreadMessages : undefined,
-      action: () => {
-        setActiveView('feed');
-        setActiveTab('messages');
-      },
-      isActive: activeTab === 'messages',
-    },
-    {
-      id: 'market',
-      label: 'Marketplace',
-      icon: <ShoppingBag className="w-5 h-5" />,
-      action: () => {
-        setActiveView('feed');
-        setActiveTab('market');
-      },
-      isActive: activeTab === 'market',
-    },
-    {
-      id: 'notifications',
-      label: 'Notifications',
-      icon: <Bell className="w-5 h-5" />,
-      badge: unreadNotificationsCount > 0 ? unreadNotificationsCount : undefined,
-      action: () => {
-        setNotificationsModalOpen(true);
-      },
-      isActive: false,
-    },
-    {
-      id: 'communities',
-      label: 'Communities',
-      icon: <Users className="w-5 h-5" />,
-      action: () => {
-        setActiveView('communities');
-      },
-      isActive: activeView === 'communities',
-    },
-    {
-      id: 'creator-hub',
-      label: 'Creator Hub',
-      icon: <Briefcase className="w-5 h-5" />,
-      action: () => {
-        setActiveView('creator-hub');
-      },
-      isActive: activeView === 'creator-hub',
-    },
-    {
-      id: 'saved',
-      label: 'Saved Posts',
-      icon: <Bookmark className="w-5 h-5" />,
-      action: () => {
-        setActiveView('saved');
-      },
-      isActive: activeView === 'saved',
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: <Settings className="w-5 h-5" />,
-      action: () => {
-        setActiveView('settings');
-      },
-      isActive: activeView === 'settings',
-    },
-    {
-      id: 'ai-assistant',
-      label: 'Gistupp AI',
-      icon: <Sparkles className="w-5 h-5 text-amber-500" />,
-      action: () => {
-        setAiAssistantModalOpen(true);
-      },
-      isActive: false,
-    },
-    {
-      id: 'moderation',
-      label: 'Safety Center',
-      icon: <ShieldAlert className="w-5 h-5 text-rose-500" />,
-      action: () => {
-        setModerationModalOpen(true);
-      },
-      isActive: false,
-    },
+  const { activeTab, setActiveTab, activeView, setActiveView, currentUser, conversations } = useApp();
+  const unread = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
+  const items = [
+    { id: 'home' as const, label: 'Home', icon: <Home className="h-5 w-5" /> },
+    { id: 'explore' as const, label: 'Explore', icon: <Compass className="h-5 w-5" /> },
+    { id: 'live' as const, label: 'Live', icon: <Radio className="h-5 w-5" /> },
+    { id: 'messages' as const, label: 'Messages', icon: <MessageCircle className="h-5 w-5" /> },
+    { id: 'market' as const, label: 'Market', icon: <ShoppingBag className="h-5 w-5" /> },
   ];
-
   return (
-    <aside className="w-60 xl:w-64 sticky top-14 h-[calc(100vh-3.5rem)] flex flex-col justify-between py-4 pr-2 shrink-0 select-none overflow-y-auto no-scrollbar">
-      <div className="space-y-4">
-        {/* Navigation list */}
-        <div className="space-y-1">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={item.action}
-              style={
-                item.isActive
-                  ? {
-                      backgroundColor: 'var(--brand-accent-soft)',
-                      color: 'var(--brand-accent-dark)',
-                    }
-                  : undefined
-              }
-              className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold transition-all ${
-                item.isActive
-                  ? 'shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span style={item.isActive ? { color: 'var(--brand-accent)' } : undefined}>{item.icon}</span>
-                <span>{item.label}</span>
-              </div>
-              {item.badge && (
-                <span
-                  style={{ backgroundColor: 'var(--brand-accent)' }}
-                  className="w-5 h-5 rounded-full text-white text-[10px] font-bold flex items-center justify-center"
-                >
-                  {item.badge}
-                </span>
-              )}
+    <aside className="sticky top-14 flex h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col justify-between overflow-y-auto py-4 pr-2">
+      <nav aria-label="Main navigation" className="space-y-1">
+        {items.map((item) => {
+          const active = activeView === 'feed' && activeTab === item.id;
+          return (
+            <button key={item.id} onClick={() => { setActiveView('feed'); setActiveTab(item.id); }}
+              aria-current={active ? 'page' : undefined}
+              style={active ? { backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent-dark)' } : undefined}
+              className={'flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ' + (active ? 'shadow-xs' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60')}>
+              <span style={active ? { color: 'var(--brand-accent)' } : undefined}>{item.icon}</span>
+              <span>{item.label}</span>
+              {item.id === 'messages' && unread > 0 && <span className="ml-auto rounded-full bg-[#E91E8C] px-1.5 py-0.5 text-[10px] font-bold text-white">{unread}</span>}
             </button>
-          ))}
-        </div>
-
-        {/* Big Create Post Button */}
-        <button
-          onClick={() => setCreatePostModalOpen(true)}
-          style={{
-            background: 'linear-gradient(135deg, var(--brand-accent-dark, #BE185D), var(--brand-accent, #E91E8C))',
-            boxShadow: '0 4px 14px var(--brand-accent-ring, rgba(233, 30, 140, 0.25))',
-          }}
-          className="w-full min-h-[44px] py-3 px-4 rounded-2xl hover:opacity-95 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-        >
-          <PlusCircle className="w-5 h-5" />
-          <span>New Post</span>
-        </button>
-      </div>
-
-      {/* User profile snippet */}
-      <button
-        onClick={() => {
-          setActiveView('feed');
-          setActiveTab('profile');
-        }}
-        className="w-full p-2.5 rounded-2xl flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors text-left border border-slate-200/60 dark:border-slate-800"
-      >
+          );
+        })}
+      </nav>
+      <button onClick={() => { setActiveView('feed'); setActiveTab('profile'); }}
+        className="flex w-full items-center gap-3 rounded-xl border border-slate-200/70 p-2.5 text-left transition-colors hover:bg-slate-100 dark:border-slate-800 dark:hover:bg-slate-800/60">
         <Avatar src={currentUser.avatar} name={currentUser.name} size="sm" />
-        <div className="flex-1 min-w-0">
-          <span className="text-xs font-bold text-slate-900 dark:text-white truncate block">
-            {currentUser.name}
-          </span>
-          <p className="text-[11px] text-slate-400 truncate">@{currentUser.handle}</p>
-        </div>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-xs font-bold text-slate-900 dark:text-white">{currentUser.name}</span>
+          <span className="block truncate text-[11px] text-slate-400">@{currentUser.handle}</span>
+        </span>
       </button>
     </aside>
   );
