@@ -32,6 +32,7 @@ export const CreateStoryModal: React.FC = () => {
   const [selectedBg, setSelectedBg] = useState(BG_PRESETS[0]);
   const [audience, setAudience] = useState<'everyone' | 'followers' | 'close-friends'>('everyone');
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   if (!createStoryModalOpen) return null;
 
@@ -57,42 +58,43 @@ export const CreateStoryModal: React.FC = () => {
   };
 
   const handlePublish = async () => {
-    if (mode === 'media') {
-      if (!mediaPreview) {
-        showToast('Please select a photo or video to share', 'error');
-        return;
-      }
-      let finalUrl = mediaPreview;
-      if (mediaPreview.startsWith('data:')) {
-        try {
-          finalUrl = await uploadMedia(mediaPreview);
-        } catch {
-          finalUrl = mediaPreview;
+    if (isPublishing) return;
+    setIsPublishing(true);
+    try {
+      if (mode === 'media') {
+        if (!mediaPreview) {
+          showToast('Please select a photo or video to share', 'error');
+          return;
         }
+        const finalUrl = mediaPreview.startsWith('data:') ? await uploadMedia(mediaPreview) : mediaPreview;
+        await createStory(
+          mediaType,
+          finalUrl,
+          caption.trim() || undefined,
+          undefined,
+          undefined,
+          audience,
+          mediaType === 'photo' ? finalUrl : undefined
+        );
+      } else {
+        if (!textContent.trim()) {
+          showToast('Please write some text for your story', 'error');
+          return;
+        }
+        await createStory('text', '', undefined, textContent.trim(), selectedBg.class, audience);
       }
-      createStory(
-        mediaType,
-        finalUrl,
-        caption.trim() || undefined,
-        undefined,
-        undefined,
-        audience,
-        mediaType === 'photo' ? finalUrl : undefined
-      );
-    } else {
-      if (!textContent.trim()) {
-        showToast('Please write some text for your story', 'error');
-        return;
-      }
-      createStory('text', '', undefined, textContent.trim(), selectedBg.class, audience);
-    }
 
-    // Reset and close
-    setMediaPreview(null);
-    setCaption('');
-    setTextContent('');
-    setIsPreviewing(false);
-    setCreateStoryModalOpen(false);
+      setMediaPreview(null);
+      setCaption('');
+      setTextContent('');
+      setIsPreviewing(false);
+      setCreateStoryModalOpen(false);
+    } catch (error: any) {
+      console.error('Story publish failed:', error);
+      showToast(error?.message || 'Story could not be published. Please try again.', 'error');
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -277,7 +279,7 @@ export const CreateStoryModal: React.FC = () => {
           </button>
           <button
             onClick={handlePublish}
-            disabled={mode === 'media' ? !mediaPreview : !textContent.trim()}
+            disabled={isPublishing || (mode === 'media' ? !mediaPreview : !textContent.trim())}
             className="flex-1 min-h-[42px] py-2 text-xs font-bold rounded-xl bg-[#E91E8C] hover:bg-[#BE185D] disabled:opacity-50 text-white shadow-md shadow-[#E91E8C]/20 transition-all"
           >
             Share Story
