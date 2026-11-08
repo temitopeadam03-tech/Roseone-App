@@ -176,7 +176,7 @@ export const MessagesView: React.FC = () => {
         }`}
       >
         {/* Header & New Chat button */}
-        <div className="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div className='p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2'>
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
