@@ -247,7 +247,7 @@ export class PersistentStorage {
   /** Move legacy inline image data out of the JSON snapshot before the next durable write. */
   private async migrateInlineImages(value: any, cache = new Map<string, string>()): Promise<{ value: any; changed: boolean }> {
     if (typeof value === 'string') {
-      const match = value.match(/^data:(image\\/(?:jpeg|jpg|png|webp|gif));base64,([\\s\\S]+)$/i);
+      const match = value.match(/^data:(image\/(?:jpeg|jpg|png|webp|gif));base64,([\s\S]+)$/i);
       if (!match || !this.durableClient) return { value, changed: false };
       const cached = cache.get(value);
       if (cached) return { value: cached, changed: true };
