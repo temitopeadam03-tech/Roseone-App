@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import {
   User,
   Post,
@@ -353,11 +354,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const login = async (handleOrEmail: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      if (supabase) {
+        if (!handleOrEmail.includes('@')) return { success: false, error: 'Please sign in with the email address linked to your account.' };
+        const { data, error } = await supabase.auth.signInWithPassword({ email: handleOrEmail.trim(), password });
+        if (error) throw error;
+        if (!data.session || !data.user) throw new Error('Supabase did not return an active session.');
+        localStorage.setItem('rose_auth_token', data.session.access_token);
+        const meta = data.user.user_metadata || {};
+        const user: User = {
+          ...DEFAULT_CURRENT_USER,
+          id: data.user.id,
+          name: String(meta.name || meta.full_name || data.user.email?.split('@')[0] || 'Gistupp member'),
+          handle: String(meta.handle || data.user.email?.split('@')[0] || `member_${data.user.id.slice(0, 8)}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 25),
+          avatar: String(meta.avatar_url || ''),
+          bio: String(meta.bio || ''),
+          joinedDate: 'Joined recently',
+          followers: [], following: [], followersCount: 0, followingCount: 0, postsCount: 0,
+          verified: false, isPrivate: false,
+        };
+        setCurrentUser(user);
+        setAllUsers(prev => [...prev.filter(item => item.id !== user.id), user]);
+        setIsAuthenticated(true);
+        setIsAuthModalOpen(false);
+        void refreshData();
+        return { success: true };
+      }
       const res = await api.login(handleOrEmail, password);
       if (res.user) {
-        setCurrentUser(res.user);
-        setIsAuthenticated(true);
-        refreshData();
+        setCurrentUser(res.user); setIsAuthenticated(true); void refreshData();
         return { success: true };
       }
       return { success: false, error: 'Login failed' };
@@ -366,22 +390,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const register = async (
-    name: string,
-    handle: string,
-    email: string,
-    password: string,
-    bio?: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  const register = async (name: string, handle: string, email: string, password: string, bio?: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await api.register({ name, handle, email, password, bio });
-      if (res.user) {
-        setCurrentUser(res.user);
-        setIsAuthenticated(true);
-        setAllUsers((prev) => [...prev.filter((u) => u.id !== res.user.id), res.user]);
-        refreshData();
+      if (supabase) {
+        const cleanHandle = handle.trim().replace(/^@/, '').toLowerCase();
+        if (!/^[a-z0-9_]{3,25}$/.test(cleanHandle)) return { success: false, error: 'Username must be 3–25 letters, numbers, or underscores.' };
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: { data: { name: name.trim(), handle: cleanHandle, bio: bio?.trim() || '' }, emailRedirectTo: window.location.origin },
+        });
+        if (error) throw error;
+        if (!data.user) throw new Error('Supabase did not create the account.');
+        if (!data.session) return { success: false, error: 'Account created. Please check your email and confirm your address, then sign in.' };
+        localStorage.setItem('rose_auth_token', data.session.access_token);
+        const meta = data.user.user_metadata || {};
+        const user: User = {
+          ...DEFAULT_CURRENT_USER, id: data.user.id, name: name.trim(), handle: cleanHandle,
+          avatar: String(meta.avatar_url || ''), bio: bio?.trim() || '',
+          joinedDate: 'Joined recently', followers: [], following: [], followersCount: 0,
+          followingCount: 0, postsCount: 0, verified: false, isPrivate: false,
+        };
+        setCurrentUser(user); setAllUsers(prev => [...prev.filter(item => item.id !== user.id), user]);
+        setIsAuthenticated(true); setIsAuthModalOpen(false); void refreshData();
         return { success: true };
       }
+      const res = await api.register({ name, handle, email, password, bio });
+      if (res.user) { setCurrentUser(res.user); setIsAuthenticated(true); setAllUsers(prev => [...prev.filter(u => u.id !== res.user.id), res.user]); void refreshData(); return { success: true }; }
       return { success: false, error: 'Registration failed' };
     } catch (err: any) {
       return { success: false, error: err.message || 'Registration failed' };
