@@ -167,7 +167,7 @@ export const MessagesView: React.FC = () => {
           </section>
         )
       ) : (
-    <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex>
+    <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex">
 
       {/* Conversation List Column */}
       <div
