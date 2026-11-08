@@ -290,7 +290,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 <img
                   src={post.resharedPost.media[0]}
                   alt="Embedded media"
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-contain bg-slate-100 dark:bg-slate-900"
                 />
               </div>
             )}
@@ -362,8 +362,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 src={imgUrl}
                 alt={`Media ${i + 1}`}
                 onClick={() => setSelectedImage(imgUrl)}
-                className={`w-full object-cover cursor-pointer hover:opacity-95 transition-opacity ${
-                  post.media && post.media.length === 1 ? 'max-h-[420px]' : 'h-48'
+                className={`w-full object-contain bg-slate-100 dark:bg-slate-900 cursor-pointer hover:opacity-95 transition-opacity ${
+                  post.media && post.media.length === 1 ? 'max-h-[520px]' : 'h-48'
                 }`}
               />
             ))}
