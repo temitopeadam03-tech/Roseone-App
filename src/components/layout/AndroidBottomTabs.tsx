@@ -27,7 +27,7 @@ export const AndroidBottomTabs: React.FC = () => {
     {
       id: 'live',
       label: 'Live',
-      icon: <Radio className="w-7 h-7" />,
+      icon: <Radio className="w-6 h-6" />,
     },
     {
       id: 'messages',
