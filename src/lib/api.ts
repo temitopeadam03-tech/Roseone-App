@@ -15,9 +15,12 @@ import {
   ReactionType,
 } from '../types';
 
+// Use the durable Render API by default, including when the frontend is
+// hosted separately on Netlify. This keeps Supabase token verification and
+// shared database writes on the configured production backend.
 const API_BASE = (
   (typeof import.meta !== 'undefined' && (import.meta.env?.VITE_API_URL || import.meta.env?.VITE_API_BASE_URL)) ||
-  ''
+  'https://roseone-app.onrender.com'
 ).replace(/\/$/, '');
 
 class ApiClient {
