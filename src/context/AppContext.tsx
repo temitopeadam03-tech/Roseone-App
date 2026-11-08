@@ -2423,6 +2423,46 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
+    if (!supabase) return;
+    const applySupabaseSession = (session: any) => {
+      if (!session?.access_token || !session.user) return;
+      localStorage.setItem('rose_auth_token', session.access_token);
+      const authUser = session.user;
+      const meta = authUser.user_metadata || {};
+      const user: User = {
+        ...DEFAULT_CURRENT_USER,
+        id: authUser.id,
+        name: String(meta.name || meta.full_name || authUser.email?.split('@')[0] || 'Gistupp member'),
+        handle: String(meta.handle || authUser.email?.split('@')[0] || `member_${authUser.id.slice(0, 8)}`).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 25),
+        avatar: String(meta.avatar_url || ''),
+        bio: String(meta.bio || ''),
+        joinedDate: 'Joined recently',
+        followers: [], following: [], followersCount: 0, followingCount: 0,
+        postsCount: 0, verified: false, isPrivate: false,
+      };
+      setCurrentUser(user);
+      setAllUsers(prev => [...prev.filter(item => item.id !== user.id), user]);
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+    };
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) applySupabaseSession(data.session);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
+        applySupabaseSession(session);
+      }
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('rose_auth_token');
+        setIsAuthenticated(false);
+        setCurrentUser(DEFAULT_CURRENT_USER);
+        setIsAuthModalOpen(true);
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
     void refreshData();
     const syncTimer = window.setInterval(() => { void refreshData(); }, 15000);
     const onFocus = () => { void refreshData(); };
