@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Menu,
-  Plus,
   Bell,
   User as UserIcon,
   Settings,
@@ -72,78 +71,7 @@ export const TopHeader: React.FC = () => {
           </a>
         </div>
 
-        {/* Zone 2: Clean Nav Links (Desktop & Tablet) */}
-        <nav className="hidden md:flex items-center gap-3 lg:gap-5 xl:gap-6 text-xs font-semibold text-slate-600 dark:text-slate-300">
-          <button
-            onClick={() => {
-              setActiveView('feed');
-              setActiveTab('home');
-            }}
-            style={activeView === 'feed' && activeTab === 'home' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeView === 'feed' && activeTab === 'home'
-                ? 'font-bold'
-                : ''
-            }`}
-          >
-            Feed
-          </button>
-          <button
-            onClick={() => {
-              setActiveView('feed');
-              setActiveTab('explore');
-            }}
-            style={activeTab === 'explore' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeTab === 'explore' ? 'font-bold' : ''
-            }`}
-          >
-            Explore
-          </button>
-          <button
-            onClick={() => {
-              setActiveView('feed');
-              setActiveTab('market');
-            }}
-            style={activeTab === 'market' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeTab === 'market' ? 'font-bold' : ''
-            }`}
-          >
-            Marketplace
-          </button>
-          <button
-            onClick={() => setActiveView('communities')}
-            style={activeView === 'communities' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeView === 'communities' ? 'font-bold' : ''
-            }`}
-          >
-            Communities
-          </button>
-          <button
-            onClick={() => {
-              setActiveView('feed');
-              setActiveTab('messages');
-            }}
-            style={activeTab === 'messages' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeTab === 'messages' ? 'font-bold' : ''
-            }`}
-          >
-            Messages
-          </button>
-          <button
-            onClick={() => setActiveView('creator-hub')}
-            style={activeView === 'creator-hub' ? { color: 'var(--brand-accent)' } : undefined}
-            className={`whitespace-nowrap transition-colors hover:text-[#E91E8C] ${
-              activeView === 'creator-hub' ? 'font-bold' : ''
-            }`}
-          >
-            Creator Hub
-          </button>
-        </nav>
-
+        {/* Zone 2: Account and utility controls */}
         {/* Zone 3: Device Preview Selector & Primary Action */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <PWAInstallButton />
@@ -158,15 +86,6 @@ export const TopHeader: React.FC = () => {
             {unreadNotificationsCount > 0 && (
               <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E91E8C] ring-2 ring-white dark:ring-[#17131A]" />
             )}
-          </button>
-
-          {/* New Post button on desktop */}
-          <button
-            onClick={() => setCreatePostModalOpen(true)}
-            className="hidden sm:flex min-h-[36px] px-3.5 py-1.5 bg-[#E91E8C] hover:bg-[#BE185D] text-white text-xs font-bold rounded-xl shadow-xs transition-colors items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Post</span>
           </button>
 
           {/* Profile Menu Trigger */}
