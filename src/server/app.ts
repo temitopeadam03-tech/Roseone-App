@@ -610,12 +610,21 @@ export function createExpressApp() {
       const { content, media, pollData, tags, communityId } = req.body;
       const authorId = authUser?.id;
 
-      if (!authorId || !content || typeof content !== 'string') {
-        res.status(400).json({ success: false, error: 'authorId and content are required' });
+      const safeContent = typeof content === 'string' ? content.trim() : '';
+      const hasMedia = Array.isArray(media) && media.length > 0;
+      const hasPoll = Boolean(
+        pollData && typeof pollData.question === 'string' && pollData.question.trim() &&
+        Array.isArray(pollData.options) && pollData.options.filter((option: unknown) => typeof option === 'string' && option.trim()).length >= 2
+      );
+
+      // A feed post may contain only photos/videos, only a poll, or text.
+      // Do not reject valid media-only posts just because content is empty.
+      if (!authorId || (!safeContent && !hasMedia && !hasPoll)) {
+        res.status(400).json({ success: false, error: 'Add text, media, or a valid poll before publishing.' });
         return;
       }
 
-      const post = storage.createPost(authorId, content.trim(), media, pollData, tags, communityId);
+      const post = storage.createPost(authorId, safeContent, media, pollData, tags, communityId);
       res.status(201).json({ success: true, post });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
