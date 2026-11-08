@@ -10,6 +10,8 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 
+const isVideoMedia = (url: string) => /^data:video\//i.test(url) || /\.(mp4|webm)(?:[?#]|$)/i.test(url) || /video/i.test(url);
+
 export const CreatePostModal: React.FC = () => {
   const {
     createPostModalOpen,
@@ -34,25 +36,29 @@ export const CreatePostModal: React.FC = () => {
   if (!createPostModalOpen) return null;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    Array.from(files).forEach((file) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    files.forEach((file) => {
+      const supported = file.type.startsWith('image/') || ['video/mp4', 'video/webm'].includes(file.type);
+      if (!supported) {
+        showToast('Choose an image or an MP4/WebM video.', 'error');
+        return;
+      }
       if (file.size > 15 * 1024 * 1024) {
-        showToast('Image must be under 15MB', 'error');
+        showToast('Each media file must be 15MB or smaller.', 'error');
         return;
       }
       const reader = new FileReader();
       reader.onload = async () => {
-        if (typeof reader.result === 'string') {
-          try {
-            const url = await uploadMedia(reader.result, file.name);
-            setMediaList((prev) => [...prev, url]);
-          } catch (error: any) {
-            showToast(error?.message || 'Image upload failed. Please retry.', 'error');
-          }
+        if (typeof reader.result !== 'string') return;
+        try {
+          const url = await uploadMedia(reader.result, file.name);
+          setMediaList((previous) => [...previous, url]);
+        } catch (error: any) {
+          showToast(error?.message || 'Media upload failed. Please retry.', 'error');
         }
       };
+      reader.onerror = () => showToast('Could not read that file. Please try another.', 'error');
       reader.readAsDataURL(file);
     });
   };
@@ -174,7 +180,7 @@ export const CreatePostModal: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {mediaList.map((url, i) => (
                 <div key={i} className="relative rounded-xl overflow-hidden group border border-slate-200 dark:border-slate-800">
-                  <img src={url} alt={`Upload ${i}`} className="w-full h-32 object-contain bg-slate-100 dark:bg-slate-900" />
+                  {isVideoMedia(url) ? <video src={url} controls playsInline className="h-32 w-full bg-black object-contain" /> : <img src={url} alt={`Upload ${i}`} className="h-32 w-full bg-slate-100 object-contain dark:bg-slate-900" />}
                   <button
                     onClick={() => setMediaList(mediaList.filter((_, idx) => idx !== i))}
                     className="absolute top-1.5 right-1.5 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-full transition-colors"
@@ -293,7 +299,7 @@ export const CreatePostModal: React.FC = () => {
               <input
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,video/mp4,video/webm"
                 onChange={handleFileUpload}
                 className="hidden"
               />
