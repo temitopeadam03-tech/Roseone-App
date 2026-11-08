@@ -247,14 +247,14 @@ export class PersistentStorage {
   /** Move legacy inline image data out of the JSON snapshot before the next durable write. */
   private async migrateInlineImages(value: any, cache = new Map<string, string>()): Promise<{ value: any; changed: boolean }> {
     if (typeof value === 'string') {
-      const match = value.match(/^data:(image\/(?:jpeg|jpg|png|webp|gif));base64,([\s\S]+)$/i);
+      const match = value.match(/^data:(image[/](jpeg|jpg|png|webp|gif));base64,(.*)$/i);
       if (!match || !this.durableClient) return { value, changed: false };
       const cached = cache.get(value);
       if (cached) return { value: cached, changed: true };
       const mimeType = match[1].toLowerCase();
       const ext = mimeType === 'image/jpeg' || mimeType === 'image/jpg' ? 'jpg' : mimeType.split('/')[1];
       const objectPath = `legacy-import/${crypto.randomUUID()}.${ext}`;
-      const bytes = Buffer.from(match[2], 'base64');
+      const bytes = Buffer.from(match[3], 'base64');
       const { error } = await this.durableClient.storage.from('gistupp-public').upload(objectPath, bytes, {
         contentType: mimeType,
         upsert: false,
