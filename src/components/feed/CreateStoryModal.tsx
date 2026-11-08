@@ -282,7 +282,7 @@ export const CreateStoryModal: React.FC = () => {
             disabled={isPublishing || (mode === 'media' ? !mediaPreview : !textContent.trim())}
             className="flex-1 min-h-[42px] py-2 text-xs font-bold rounded-xl bg-[#E91E8C] hover:bg-[#BE185D] disabled:opacity-50 text-white shadow-md shadow-[#E91E8C]/20 transition-all"
           >
-            Share Story
+            {isPublishing ? 'Publishing…' : 'Share Story'}
           </button>
         </div>
       </div>
