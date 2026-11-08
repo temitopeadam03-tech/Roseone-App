@@ -45,12 +45,11 @@ export const CreatePostModal: React.FC = () => {
       const reader = new FileReader();
       reader.onload = async () => {
         if (typeof reader.result === 'string') {
-          const raw = reader.result;
           try {
-            const url = await uploadMedia(raw, file.name);
+            const url = await uploadMedia(reader.result, file.name);
             setMediaList((prev) => [...prev, url]);
-          } catch {
-            setMediaList((prev) => [...prev, raw]);
+          } catch (error: any) {
+            showToast(error?.message || 'Image upload failed. Please retry.', 'error');
           }
         }
       };
@@ -175,7 +174,7 @@ export const CreatePostModal: React.FC = () => {
             <div className="grid grid-cols-2 gap-2">
               {mediaList.map((url, i) => (
                 <div key={i} className="relative rounded-xl overflow-hidden group border border-slate-200 dark:border-slate-800">
-                  <img src={url} alt={`Upload ${i}`} className="w-full h-32 object-cover" />
+                  <img src={url} alt={`Upload ${i}`} className="w-full h-32 object-contain bg-slate-100 dark:bg-slate-900" />
                   <button
                     onClick={() => setMediaList(mediaList.filter((_, idx) => idx !== i))}
                     className="absolute top-1.5 right-1.5 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-full transition-colors"
