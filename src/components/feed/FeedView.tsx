@@ -117,7 +117,7 @@ export const FeedView: React.FC = () => {
 
   return (
     <div
-      className="space-y-3 pb-8"
+      className="w-full min-w-0 space-y-4 sm:space-y-5 pb-8"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -161,7 +161,7 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* Stories Rail */}
-      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3 sm:p-3.5 shadow-xs">
+      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs">
         <div className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto no-scrollbar py-1 px-1">
           {/* Current User Story Circle / Add Trigger */}
           {(() => {
