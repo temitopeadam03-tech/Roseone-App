@@ -14,11 +14,16 @@ import {
   Pause,
   Plus,
   MessageSquare,
+  Users,
+  Hash,
+  Megaphone,
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Conversation, Message } from '../../types';
 import { Avatar } from '../ui/Avatar';
+import { CommunitiesView } from '../communities/CommunitiesView';
+import { CommunityDashboard } from '../communities/CommunityDashboard';
 
 export const MessagesView: React.FC = () => {
   const {
@@ -33,8 +38,11 @@ export const MessagesView: React.FC = () => {
     allUsers,
     uploadMedia,
     showToast,
+    communities,
   } = useApp();
 
+  const [hubSection, setHubSection] = useState<'messaging' | 'communities' | 'channels'>('messaging');
+  const [channelCommunityId, setChannelCommunityId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [messageText, setMessageText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -139,8 +147,28 @@ export const MessagesView: React.FC = () => {
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const selectedChannelCommunity = communities.find((community) => community.id === channelCommunityId);
+
   return (
-    <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden h-[calc(100vh-140px)] min-h-[540px] flex">
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-2">
+        <div className="grid grid-cols-3 gap-2">
+          {([{ id: "messaging" as const, label: "Messaging", icon: MessageSquare }, { id: "communities" as const, label: "Communities", icon: Users }, { id: "channels" as const, label: "Channels", icon: Megaphone }]).map((item) => {
+            const Icon = item.icon;
+            return <button key={item.id} onClick={() => { setHubSection(item.id); setChannelCommunityId(null); }} className={`min-h-12 rounded-xl px-2 py-2 flex items-center justify-center gap-2 text-xs sm:text-sm font-bold transition-colors ${hubSection === item.id ? "bg-[#E91E8C] text-white shadow-sm" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"}`}><Icon className="w-4 h-4" />{item.label}</button>;
+          })}
+        </div>
+      </div>
+      {hubSection === "communities" ? <CommunitiesView /> : hubSection === "channels" ? (
+        selectedChannelCommunity ? <CommunityDashboard community={selectedChannelCommunity} onBack={() => setChannelCommunityId(null)} /> : (
+          <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-4 sm:p-5 space-y-4">
+            <div><h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Channels</h2><p className="text-xs text-slate-500 mt-1">Discover announcement and discussion channels across your communities.</p></div>
+            {communities.length === 0 ? <div className="py-12 text-center"><Hash className="w-10 h-10 mx-auto text-slate-300 mb-2"/><p className="font-bold text-sm text-slate-800 dark:text-white">No community channels yet</p><p className="text-xs text-slate-500 mt-1">Create a community first, then add channels for focused discussions.</p></div> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{communities.flatMap((community) => (community.channels || []).map((channel) => ({ community, channel }))).map(({community, channel}) => <button key={community.id + "-" + channel} onClick={() => setChannelCommunityId(community.id)} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left hover:border-[#E91E8C]/60 hover:bg-pink-50/40 dark:hover:bg-pink-950/10 transition-colors"><div className="flex items-center gap-2"><span className="w-9 h-9 rounded-xl bg-pink-100 dark:bg-pink-950/40 text-[#BE185D] flex items-center justify-center"><Hash className="w-4 h-4"/></span><div className="min-w-0 flex-1"><p className="font-bold text-sm text-slate-900 dark:text-white">#{channel}</p><p className="text-[11px] text-slate-500">{community.name}</p></div><ArrowLeft className="w-4 h-4 rotate-180 text-slate-400"/></div></button>)}</div>}
+          </section>
+        )
+      ) : (
+    <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex>
+
       {/* Conversation List Column */}
       <div
         className={`w-full sm:w-80 md:w-88 border-r border-slate-200 dark:border-slate-800 flex flex-col ${
@@ -626,6 +654,8 @@ export const MessagesView: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+    </div>
       )}
     </div>
   );
