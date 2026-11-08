@@ -2472,12 +2472,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [currentUser.id]);
 
   const uploadMedia = async (dataUrl: string, filename?: string): Promise<string> => {
-    try {
-      return await api.uploadMedia(dataUrl, filename);
-    } catch (err: any) {
-      console.warn('Backend upload error, falling back to data URL:', err);
-      return dataUrl;
-    }
+    // Never put base64 media into the shared JSON snapshot: upload failures must
+    // be visible to the composer instead of silently creating oversized records.
+    return api.uploadMedia(dataUrl, filename);
   };
 
   const resolveModerationReport = async (reportId: string, action: 'resolve' | 'dismiss' | 'delete_content') => {
