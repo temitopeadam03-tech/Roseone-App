@@ -162,7 +162,7 @@ export const CreateStoryModal: React.FC = () => {
                     <img
                       src={mediaPreview}
                       alt="Story preview"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   )}
                   <button
