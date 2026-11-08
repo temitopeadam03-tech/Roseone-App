@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Search, Compass, Users, TrendingUp, Heart, MessageCircle, Repeat2, Bookmark, Share2, Upload, X, ChevronUp, ChevronDown, Send, Volume2, VolumeX } from 'lucide-react';
+import { Search, Compass, Users, TrendingUp, Heart, MessageCircle, Repeat2, Bookmark, Share2, Upload, X, ChevronUp, ChevronDown, Send, Volume2, VolumeX, UserPlus, UserCheck, Settings2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 
