@@ -358,9 +358,10 @@ export const CreateListingModal: React.FC = () => {
             </button>
             <button
               type="submit"
+              disabled={isUploadingImages}
               className="flex-1 min-h-[42px] py-2 text-xs font-bold rounded-xl bg-[#E91E8C] hover:bg-[#BE185D] text-white shadow-md shadow-[#E91E8C]/20 transition-all"
             >
-              Publish Listing
+              {isUploadingImages ? 'Uploading photos…' : 'Publish Listing'}
             </button>
           </div>
         </form>
