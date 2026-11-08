@@ -219,6 +219,12 @@ export class PersistentStorage {
           userCredentials: localCredentials,
           sessions: localSessions,
         } as DatabaseSchema);
+        const migrated = await this.migrateInlineImages(this.db);
+        if (migrated.changed) {
+          this.db = cleanLegacyDatabase(migrated.value as DatabaseSchema);
+          await this.persistDurable();
+          console.info('[storage] Legacy inline images migrated to Supabase Storage.');
+        }
         this.persistSync(this.db);
         console.info('[storage] Shared app data loaded from Supabase.');
       } else {
@@ -236,6 +242,50 @@ export class PersistentStorage {
       this.durableInitPromise = null;
       throw error;
     }
+  }
+
+  /** Move legacy inline image data out of the JSON snapshot before the next durable write. */
+  private async migrateInlineImages(value: any, cache = new Map<string, string>()): Promise<{ value: any; changed: boolean }> {
+    if (typeof value === 'string') {
+      const match = value.match(/^data:(image\\/(?:jpeg|jpg|png|webp|gif));base64,([\\s\\S]+)$/i);
+      if (!match || !this.durableClient) return { value, changed: false };
+      const cached = cache.get(value);
+      if (cached) return { value: cached, changed: true };
+      const mimeType = match[1].toLowerCase();
+      const ext = mimeType === 'image/jpeg' || mimeType === 'image/jpg' ? 'jpg' : mimeType.split('/')[1];
+      const objectPath = `legacy-import/${crypto.randomUUID()}.${ext}`;
+      const bytes = Buffer.from(match[2], 'base64');
+      const { error } = await this.durableClient.storage.from('gistupp-public').upload(objectPath, bytes, {
+        contentType: mimeType,
+        upsert: false,
+        cacheControl: '31536000',
+      });
+      if (error) throw new Error(`Could not migrate an existing image to Supabase Storage: ${error.message}`);
+      const publicUrl = this.durableClient.storage.from('gistupp-public').getPublicUrl(objectPath).data.publicUrl;
+      cache.set(value, publicUrl);
+      return { value: publicUrl, changed: true };
+    }
+    if (Array.isArray(value)) {
+      let changed = false;
+      const next = [];
+      for (const item of value) {
+        const result = await this.migrateInlineImages(item, cache);
+        next.push(result.value);
+        changed = changed || result.changed;
+      }
+      return { value: next, changed };
+    }
+    if (value && typeof value === 'object') {
+      let changed = false;
+      const next: Record<string, any> = {};
+      for (const [key, item] of Object.entries(value)) {
+        const result = await this.migrateInlineImages(item, cache);
+        next[key] = result.value;
+        changed = changed || result.changed;
+      }
+      return { value: next, changed };
+    }
+    return { value, changed: false };
   }
 
   private async persistDurable(): Promise<void> {
