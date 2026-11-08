@@ -150,14 +150,14 @@ const MainContent: React.FC = () => {
       <ToastNotification />
 
       {/* Fully-Responsive Main Container */}
-      <main className="flex-1 w-full mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4">
+      <main className="flex-1 w-full mx-auto px-2.5 sm:px-4 lg:px-6 2xl:px-8 py-3 sm:py-5">
         {/* Mobile & Tablet Viewport (Screen width < 1024px): Naturally responsive layout */}
-        <div className={`block lg:hidden mx-auto pb-24 w-full transition-all ${isWideFullView ? 'max-w-4xl' : 'max-w-2xl'}`}>
+        <div className={`block lg:hidden mx-auto pb-24 w-full transition-all ${isWideFullView ? 'max-w-none' : 'max-w-none'}`}>
           {renderCurrentView()}
 
           {/* Fixed Bottom Navigation Tabs for mobile & tablet */}
           <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-2xl mx-auto">
+            <div className="w-full max-w-none mx-auto">
               <AndroidBottomTabs />
               <AndroidNavBar />
             </div>
@@ -165,20 +165,20 @@ const MainContent: React.FC = () => {
         </div>
 
         {/* Desktop Viewport (Screen width >= 1024px): Full-width spacious responsive workspace */}
-        <div className="hidden lg:flex justify-center gap-6 xl:gap-8 items-start w-full max-w-[1520px] mx-auto">
+        <div className="hidden lg:flex justify-center gap-6 xl:gap-8 items-start w-full max-w-[1800px] mx-auto">
           {/* Left Navigation Sidebar */}
           <DesktopSidebar />
 
           {/* Main Content Workspace */}
           {isWideFullView ? (
             /* Expansive full-width view for Marketplace, Messages, Communities, Settings */
-            <div className="flex-1 min-w-0 max-w-6xl xl:max-w-7xl">
+            <div className="flex-1 min-w-0 max-w-none">
               {renderCurrentView()}
             </div>
           ) : (
             /* 3-Column balanced layout for Home Feed & Explore */
             <>
-              <div className="flex-1 max-w-[620px] xl:max-w-[660px] shrink-0 min-w-0">
+              <div className="flex-1 max-w-[760px] 2xl:max-w-[820px] shrink-0 min-w-0">
                 {renderCurrentView()}
               </div>
               <DesktopRightPanel />
