@@ -128,7 +128,7 @@ interface AppContextType {
 
   // Communities & Groups
   communities: Community[];
-  createCommunity: (name: string, description: string, isPrivate: boolean) => void;
+  createCommunity: (name: string, description: string, isPrivate: boolean) => Promise<void>;
   createCommunityDetailed: (data: Partial<Community> & { name: string; description: string }) => Promise<Community>;
   updateCommunity: (communityId: string, updates: Partial<Community>) => void;
   deleteCommunity: (communityId: string) => void;
@@ -1497,8 +1497,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [communities]);
 
-  const createCommunity = (name: string, description: string, isPrivate: boolean) => {
-    createCommunityDetailed({
+  const createCommunity = async (name: string, description: string, isPrivate: boolean): Promise<void> => {
+    await createCommunityDetailed({
       name,
       description,
       isPrivate,
