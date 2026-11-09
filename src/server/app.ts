@@ -708,6 +708,28 @@ export function createExpressApp() {
     }
   });
 
+  app.post('/api/posts/:id/repost', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const post = storage.toggleRepostPost(req.params.id, authUser.id);
+      res.json({ success: true, post: { ...post, isReposted: (storage as any).db?.repostedPosts?.[authUser.id]?.includes(post.id) } });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Repost could not be saved.' });
+    }
+  });
+
+  app.post('/api/posts/:id/reshare', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const post = storage.createQuoteReshare(req.params.id, authUser.id, String(req.body?.caption || ''));
+      res.status(201).json({ success: true, post });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Reshare could not be saved.' });
+    }
+  });
+
   app.post('/api/posts/:id/vote', (req: Request, res: Response) => {
     try {
       const { id } = req.params;
