@@ -33,19 +33,31 @@ export function createExpressApp() {
     await previous;
 
     let unlocked = false;
+    let durableLockOwner = '';
     const unlock = () => {
       if (unlocked) return;
       unlocked = true;
-      release();
+      void (async () => {
+        try {
+          // Keep the database-wide lease until this request's changes are durable.
+          await storage.flushDurable();
+        } catch (error) {
+          console.error('[storage] Final request flush failed:', error);
+        } finally {
+          await storage.releaseDurableWriteLock(durableLockOwner);
+          release();
+        }
+      })();
     };
     res.once('finish', unlock);
     res.once('close', unlock);
 
     try {
+      durableLockOwner = await storage.acquireDurableWriteLock();
       await storage.refreshDurable();
       next();
     } catch (error) {
-      console.error('[storage] Shared state refresh failed:', error);
+      console.error('[storage] Shared state lock/refresh failed:', error);
       unlock();
       next(error);
     }
