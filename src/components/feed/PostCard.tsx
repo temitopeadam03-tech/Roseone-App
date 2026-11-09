@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Heart,
   Copy,
@@ -21,6 +21,7 @@ import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
 import { AudioPlayer } from '../ui/AudioPlayer';
 import { VoiceRecorder } from '../ui/VoiceRecorder';
+import { api } from '../../lib/api';
 
 const REACTION_OPTIONS: { type: ReactionType; emoji: string; label: string; color: string }[] = [
   { type: 'rose', emoji: '🌹', label: 'Rose', color: 'text-[#E91E8C]' },
@@ -53,6 +54,8 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   } = useApp();
 
   const [showComments, setShowComments] = useState(false);
+  const [sharesCount, setSharesCount] = useState(post.sharesCount || 0);
+  useEffect(() => setSharesCount(post.sharesCount || 0), [post.sharesCount]);
   const [commentText, setCommentText] = useState('');
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [replyingToId, setReplyingToId] = useState<string | null>(null);
@@ -74,13 +77,25 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
   const getPostUrl = () => `${window.location.origin}/post/${post.id}`;
 
+  const recordShare = async () => {
+    try {
+      const count = await api.recordPostShare(post.id);
+      setSharesCount(count);
+    } catch (error) {
+      console.error('Share count could not be saved:', error);
+      showToast(error instanceof Error ? error.message : 'Share count could not be saved.', 'error');
+    }
+  };
+
   const handleShare = async () => {
     const url = getPostUrl();
     try {
       if (navigator.share) {
         await navigator.share({ title: 'GistUpp post', url });
+        await recordShare();
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(url);
+        await recordShare();
         showToast('Link Copied', 'success');
       } else {
         showToast('Sharing is not supported in this browser.', 'error');
@@ -107,6 +122,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         field.remove();
         if (!copied) throw new Error('Clipboard permission denied');
       }
+      await recordShare();
       showToast('Link Copied', 'success');
     } catch {
       showToast('Could not copy the link. Please check browser permissions.', 'error');
@@ -545,6 +561,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
           aria-label="Copy post link"
         >
           <Copy className="w-4 h-4" />
+          <span className="tabular-nums">{sharesCount}</span>
         </button>
         <button
           onClick={() => void handleShare()}
