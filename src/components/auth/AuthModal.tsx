@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User as UserIcon, AtSign, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, AtSign, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { RoseOneSymbol } from '../ui/RoseOneLogo';
 import { useApp } from '../../context/AppContext';
 
 export const AuthModal: React.FC = () => {
@@ -57,7 +58,7 @@ export const AuthModal: React.FC = () => {
 
     if (res.success) {
       setIsAuthModalOpen(false);
-      showToast('Signed in successfully! Welcome to Gistupp.', 'success');
+      showToast('Signed in successfully! Welcome to GistUpp.', 'success');
     } else {
       setError(res.error || 'Invalid credentials.');
     }
@@ -105,8 +106,8 @@ export const AuthModal: React.FC = () => {
           </button>}
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#E91E8C] to-[#F06292] flex items-center justify-center text-white shadow-xs">
-              <Sparkles className="w-4 h-4" />
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-[#251f2c] ring-1 ring-pink-100 dark:ring-pink-900/40">
+              <RoseOneSymbol size={28} animated={false} />
             </span>
             <span className="text-xs font-bold uppercase tracking-wider text-[#E91E8C]">
               Gistupp Network
