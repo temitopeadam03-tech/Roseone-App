@@ -1372,7 +1372,7 @@ export class PersistentStorage {
       coverImage: data.coverImage || '',
       category: data.category || 'General',
       ownerId,
-      owner: ownerId ? this.getUserById(ownerId) : undefined,
+      owner: (ownerId ? this.getUserById(ownerId) : undefined) || data.owner,
       membersCount: Math.max(1, Number(data.membersCount) || 1),
       isJoined: true,
       isPrivate: !!data.isPrivate,
@@ -1390,6 +1390,26 @@ export class PersistentStorage {
     this.db.communities.unshift(newCommunity);
     this.schedulePersist();
     return newCommunity;
+  }
+
+  public updateCommunity(communityId: string, ownerId: string, updates: Partial<Community>): Community {
+    const index = this.db.communities.findIndex((community) => community.id === communityId);
+    if (index < 0) throw new Error('Community not found.');
+    const existing = this.db.communities[index];
+    if (existing.ownerId !== ownerId) throw new Error('Only the community owner can update this space.');
+    const updated: Community = { ...existing, ...updates, id: existing.id, ownerId: existing.ownerId };
+    this.db.communities[index] = updated;
+    this.schedulePersist();
+    return updated;
+  }
+
+  public deleteCommunity(communityId: string, ownerId: string): boolean {
+    const existing = this.db.communities.find((community) => community.id === communityId);
+    if (!existing) return false;
+    if (existing.ownerId !== ownerId) throw new Error('Only the community owner can delete this space.');
+    this.db.communities = this.db.communities.filter((community) => community.id !== communityId);
+    this.schedulePersist();
+    return true;
   }
 
   public joinCommunity(communityId: string): boolean {
