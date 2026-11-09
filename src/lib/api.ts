@@ -181,6 +181,17 @@ class ApiClient {
     );
   }
 
+  public async reactToPost(postId: string, reactionType: ReactionType): Promise<Post> {
+    const res = await this.request<{ success: boolean; post: Post }>(
+      `/api/posts/${postId}/react`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reactionType }),
+      }
+    );
+    return res.post;
+  }
+
   public async votePoll(postId: string, userId: string, optionId: string) {
     return this.request<{ success: boolean; post: Post }>(`/api/posts/${postId}/poll/vote`, {
       method: 'POST',
