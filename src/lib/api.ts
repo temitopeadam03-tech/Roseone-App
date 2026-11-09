@@ -507,7 +507,15 @@ class ApiClient {
 
   public async joinCommunity(id: string): Promise<boolean> {
     const res = await this.request<{ success: boolean; isJoined: boolean }>(
-      `/api/communities/${id}/join`,
+      `/api/communities/${encodeURIComponent(id)}/join`,
+      { method: 'POST' }
+    );
+    return res.isJoined;
+  }
+
+  public async leaveCommunity(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; isJoined: boolean }>(
+      `/api/communities/${encodeURIComponent(id)}/leave`,
       { method: 'POST' }
     );
     return res.isJoined;
