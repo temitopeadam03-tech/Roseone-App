@@ -162,6 +162,7 @@ export interface Message {
   isRead: boolean;
   isPinned?: boolean;
   reaction?: string;
+  expiresAt?: number;
 }
 
 export interface Conversation {
@@ -174,6 +175,7 @@ export interface Conversation {
   unreadCount: number;
   lastMessageTime: string;
   pinnedMessage?: Message;
+  disappearingMessagesSeconds?: number;
 }
 
 export interface CommunityRule {
