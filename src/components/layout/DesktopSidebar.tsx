@@ -33,15 +33,15 @@ export const DesktopSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="sticky top-16 flex h-[calc(100vh-4rem)] w-60 shrink-0 flex-col justify-between overflow-y-auto py-4 pr-2">
-      <nav aria-label="Desktop navigation" className="space-y-1 pb-4">
+    <aside className="sticky top-16 flex h-[calc(100vh-4rem)] w-56 shrink-0 flex-col justify-between overflow-y-auto py-2 pr-1">
+      <nav aria-label="Desktop navigation" className="space-y-1 pb-2">
         {items.map((item) => (
           <button
             key={item.id}
             onClick={item.action}
             aria-current={item.active ? 'page' : undefined}
             style={item.active ? { backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent-dark)' } : undefined}
-            className={'flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ' + (item.active ? 'shadow-xs' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60')}
+            className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors ' + (item.active ? 'shadow-xs' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60')}
           >
             <span style={item.active ? { color: 'var(--brand-accent)' } : undefined}>{item.icon}</span>
             <span className="flex-1 text-left">{item.label}</span>
@@ -51,7 +51,7 @@ export const DesktopSidebar: React.FC = () => {
       </nav>
       <button
         onClick={() => { setActiveView('feed'); setActiveTab('profile'); }}
-        className="sticky bottom-0 flex w-full items-center gap-3 rounded-xl border border-slate-200/70 bg-white/95 p-2.5 text-left transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-[#17131A]/95 dark:hover:bg-slate-800/60"
+        className="sticky bottom-0 flex w-full items-center gap-2.5 rounded-xl border border-slate-200/70 bg-white/95 p-2 text-left transition-colors hover:bg-slate-100 dark:border-slate-800 dark:bg-[#17131A]/95 dark:hover:bg-slate-800/60"
       >
         <Avatar src={currentUser.avatar} name={currentUser.name} size="sm" />
         <span className="min-w-0 flex-1">
