@@ -181,6 +181,23 @@ class ApiClient {
     );
   }
 
+  public async toggleSavePost(postId: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean; isSaved: boolean }>(`/api/posts/${postId}/save`, { method: 'POST' });
+    return res.isSaved;
+  }
+
+  public async toggleRepostPost(postId: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; post: Post }>(`/api/posts/${postId}/repost`, { method: 'POST' });
+    return res.post;
+  }
+
+  public async createQuoteReshare(postId: string, caption: string): Promise<Post> {
+    const res = await this.request<{ success: boolean; post: Post }>(`/api/posts/${postId}/reshare`, {
+      method: 'POST', body: JSON.stringify({ caption }),
+    });
+    return res.post;
+  }
+
   public async reactToPost(postId: string, reactionType: ReactionType): Promise<Post> {
     const res = await this.request<{ success: boolean; post: Post }>(
       `/api/posts/${postId}/react`,
