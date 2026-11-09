@@ -983,15 +983,41 @@ export class PersistentStorage {
   }
 
   // --- Conversations & Messages ---
+  private removeExpiredMessages(conversation: Conversation): boolean {
+    const before = conversation.messages.length;
+    const now = Date.now();
+    conversation.messages = conversation.messages.filter((message) => !message.expiresAt || message.expiresAt > now);
+    if (conversation.pinnedMessage?.expiresAt && conversation.pinnedMessage.expiresAt <= now) {
+      conversation.pinnedMessage = undefined;
+    }
+    return conversation.messages.length !== before;
+  }
+
   public getConversations(userId: string): Conversation[] {
-    return this.db.conversations.filter((c) =>
-      c.participants.some((p) => p.id === userId)
-    );
+    let changed = false;
+    const conversations = this.db.conversations.filter((c) => c.participants.some((p) => p.id === userId));
+    conversations.forEach((conversation) => { if (this.removeExpiredMessages(conversation)) changed = true; });
+    if (changed) this.schedulePersist();
+    return conversations;
   }
 
   public getMessages(conversationId: string): Message[] {
     const conv = this.db.conversations.find((c) => c.id === conversationId);
-    return conv ? conv.messages : [];
+    if (!conv) return [];
+    if (this.removeExpiredMessages(conv)) this.schedulePersist();
+    return conv.messages;
+  }
+
+  public setDisappearingMessages(conversationId: string, userId: string, seconds: number): Conversation {
+    const conversation = this.db.conversations.find((item) => item.id === conversationId);
+    if (!conversation || !conversation.participants.some((participant) => participant.id === userId)) {
+      throw new Error('Conversation not found');
+    }
+    const allowed = [0, 86400, 604800, 7776000];
+    if (!allowed.includes(seconds)) throw new Error('Unsupported disappearing-message duration');
+    conversation.disappearingMessagesSeconds = seconds;
+    this.schedulePersist();
+    return conversation;
   }
 
   public sendMessage(
@@ -1016,6 +1042,9 @@ export class PersistentStorage {
       audioDuration,
       createdAt: 'Just now',
       isRead: false,
+      expiresAt: conversation?.disappearingMessagesSeconds
+        ? now + conversation.disappearingMessagesSeconds * 1000
+        : undefined,
     };
 
     if (!conversation) {
