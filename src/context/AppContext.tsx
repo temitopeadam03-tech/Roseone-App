@@ -163,8 +163,8 @@ interface AppContextType {
   // Marketplace
   marketplaceListings: MarketplaceListing[];
   createListing: (data: Omit<MarketplaceListing, 'id' | 'seller' | 'status' | 'createdAt' | 'createdTimestamp' | 'viewsCount' | 'sharesCount' | 'isSaved'>) => void;
-  updateListing: (id: string, updates: Partial<MarketplaceListing>) => void;
-  deleteListing: (id: string) => void;
+  updateListing: (id: string, updates: Partial<MarketplaceListing>) => Promise<void>;
+  deleteListing: (id: string) => Promise<void>;
   toggleSaveListing: (id: string) => void;
   markListingStatus: (id: string, status: ListingStatus) => void;
   contactSeller: (listing: MarketplaceListing) => void;
@@ -2136,22 +2136,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
   };
 
-  const updateListing = (id: string, updates: Partial<MarketplaceListing>) => {
-    setMarketplaceListings((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, ...updates } : l))
-    );
-    if (activeListing && activeListing.id === id) {
-      setActiveListing((prev) => (prev ? { ...prev, ...updates } : null));
+  const updateListing = async (id: string, updates: Partial<MarketplaceListing>): Promise<void> => {
+    dataMutationVersionRef.current += 1;
+    try {
+      const savedListing = await api.updateListing(id, updates);
+      setMarketplaceListings((prev) => prev.map((listing) => listing.id === id ? savedListing : listing));
+      if (activeListing?.id === id) setActiveListing(savedListing);
+      showToast('Listing updated and saved.', 'success');
+    } catch (error) {
+      console.error('Marketplace update failed:', error);
+      showToast(error instanceof Error ? error.message : 'Listing update could not be saved.', 'error');
+      void refreshData();
     }
-    showToast('Listing updated', 'success');
   };
 
-  const deleteListing = (id: string) => {
-    setMarketplaceListings((prev) => prev.filter((l) => l.id !== id));
-    if (activeListing && activeListing.id === id) {
-      setActiveListing(null);
+  const deleteListing = async (id: string): Promise<void> => {
+    dataMutationVersionRef.current += 1;
+    try {
+      await api.deleteListing(id);
+      setMarketplaceListings((prev) => prev.filter((listing) => listing.id !== id));
+      if (activeListing?.id === id) setActiveListing(null);
+      showToast('Listing deleted.', 'info');
+    } catch (error) {
+      console.error('Marketplace delete failed:', error);
+      showToast(error instanceof Error ? error.message : 'Listing could not be deleted.', 'error');
+      void refreshData();
     }
-    showToast('Listing deleted', 'info');
   };
 
   const toggleSaveListing = (id: string) => {
