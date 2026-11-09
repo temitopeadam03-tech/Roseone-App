@@ -810,6 +810,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const savedPost = await api.reactToPost(postId, reaction);
+      dataMutationVersionRef.current += 1;
       setPosts((prev) => prev.map((post) => post.id === postId ? savedPost : post));
     } catch (error) {
       setPosts((prev) => prev.map((post) => post.id === postId ? previous : post));
@@ -839,6 +840,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const saved = await api.toggleSavePost(postId);
+      dataMutationVersionRef.current += 1;
       setPosts((prev) => prev.map((post) => post.id === postId ? { ...post, isSaved: saved } : post));
       showToast(saved ? 'Saved to collections' : 'Removed from collections', 'success');
     } catch (error) {
@@ -858,6 +860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const savedPost = await api.toggleRepostPost(postId);
+      dataMutationVersionRef.current += 1;
       setPosts((prev) => prev.map((post) => post.id === postId ? savedPost : post));
       showToast(nextReposted ? 'Reposted to your followers' : 'Repost undone', 'success');
     } catch (error) {
@@ -870,6 +873,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const newPost = await api.createQuoteReshare(originalPostId, quoteCaption || '');
+      dataMutationVersionRef.current += 1;
       setPosts((prev) => [newPost, ...prev.map((post) => post.id === originalPostId
         ? { ...post, repostsCount: newPost.resharedPost?.repostsCount ?? post.repostsCount + 1, isReposted: true }
         : post)]);
@@ -913,6 +917,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const savedComment = await api.addComment(postId, currentUser.id, content, undefined, undefined, replyToCommentId);
+      dataMutationVersionRef.current += 1;
       setComments((prev) => {
         const postComments = prev[postId] || [];
         if (replyToCommentId) {
@@ -1356,6 +1361,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       dataMutationVersionRef.current += 1;
       const savedMessage = await api.sendMessage(conversationId, currentUser.id, cleanText, mediaUrl, audioDuration, mediaType);
+      dataMutationVersionRef.current += 1;
       setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
         ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now',
             messages: [...conversation.messages.filter((message) => message.id !== tempId && message.id !== savedMessage.id), savedMessage]
