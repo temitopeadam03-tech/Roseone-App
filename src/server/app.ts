@@ -956,6 +956,11 @@ export function createExpressApp() {
         res.status(400).json({ success: false, error: 'senderId and message body required' });
         return;
       }
+      const conversation = storage.getConversations(senderId).find((item) => item.id === id);
+      if (!conversation) {
+        res.status(404).json({ success: false, error: 'Conversation not found.' });
+        return;
+      }
 
       const message = storage.sendMessage(id, senderId, text, voiceUrl, voiceDuration, mediaUrl, mediaType);
       res.status(201).json({ success: true, message });
