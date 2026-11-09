@@ -2458,6 +2458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const pendingDeletes = Array.from(snapshots.keys()).filter((id) =>
       !communities.some((community) => community.id === id)
     );
+    if (pendingWrites.length || pendingDeletes.length) dataMutationVersionRef.current += 1;
     for (const community of pendingWrites) {
       const snapshot = JSON.stringify(community);
       snapshots.set(community.id, snapshot);
