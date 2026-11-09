@@ -9,18 +9,44 @@ import { AccessToken } from 'livekit-server-sdk';
 export function createExpressApp() {
   const app = express();
 
-  // Initialize the shared snapshot once when this single-instance service starts.
-  // Do NOT reload the JSON snapshot on every API request: frequent bootstrap polls
-  // can race with a write that is still being committed and replace the in-memory
-  // mutation with the older database value. Render is configured for one instance
-  // and one Node worker, so this process remains the authoritative live cache;
-  // every response waits for flushDurable() below before it is acknowledged.
+  // Initialize the durable store before handling any request.
   app.use(async (_req: Request, _res: Response, next: NextFunction) => {
     try {
       await storage.initializeDurable();
       next();
     } catch (error) {
       console.error('[storage] Durable database initialization failed:', error);
+      next(error);
+    }
+  });
+
+  // Serialize requests within this Node process. Before each request, reload the
+  // latest shared snapshot from Supabase; after the response is durably saved,
+  // release the next request. Without this, each device can mutate an old copy
+  // of the JSON snapshot and overwrite another device's likes, comments, posts,
+  // communities, channels, or messages.
+  let requestQueue: Promise<void> = Promise.resolve();
+  app.use(async (_req: Request, res: Response, next: NextFunction) => {
+    const previous = requestQueue;
+    let release!: () => void;
+    requestQueue = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+
+    let unlocked = false;
+    const unlock = () => {
+      if (unlocked) return;
+      unlocked = true;
+      release();
+    };
+    res.once('finish', unlock);
+    res.once('close', unlock);
+
+    try {
+      await storage.refreshDurable();
+      next();
+    } catch (error) {
+      console.error('[storage] Shared state refresh failed:', error);
+      unlock();
       next(error);
     }
   });
