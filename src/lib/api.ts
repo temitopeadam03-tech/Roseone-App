@@ -122,6 +122,7 @@ class ApiClient {
         conversations: Conversation[];
         communities: Community[];
         marketplaceListings: MarketplaceListing[];
+        products: Product[];
         notifications: NotificationItem[];
         reportedItems: ReportedItem[];
         settings: UserSettings;
@@ -416,6 +417,15 @@ class ApiClient {
       body: JSON.stringify({ reportId, action }),
     });
     return res.success;
+  }
+
+  // Creator products
+  public async createProduct(data: Omit<Product, 'id' | 'salesCount' | 'rating'>): Promise<Product> {
+    const res = await this.request<{ success: boolean; product: Product }>('/api/products', {
+      method: 'POST',
+      body: JSON.stringify({ data }),
+    });
+    return res.product;
   }
 
   // Marketplace
