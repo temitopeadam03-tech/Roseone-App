@@ -684,7 +684,8 @@ export function createExpressApp() {
       }
 
       const post = storage.setPostReaction(id, userId, reactionType);
-      res.json({ success: true, post });
+      const userReaction = post.reactions?.[userId];
+      res.json({ success: true, post: { ...post, isLiked: Boolean(userReaction), userReaction } });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
     }
