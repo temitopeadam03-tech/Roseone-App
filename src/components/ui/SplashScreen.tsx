@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { RoseOneSymbol } from './RoseOneLogo';
+import { RoseOneLogo } from './RoseOneLogo';
 import { useApp } from '../../context/AppContext';
 
 interface SplashScreenProps {
@@ -44,7 +44,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   return (
     <div
       role="status"
-      aria-label="Loading Gistupp"
+      aria-label="Loading GistUpp"
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#FAF9FB] dark:bg-[#0E0A12] transition-opacity duration-300 ease-out select-none ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
       }`}
@@ -61,26 +61,12 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       <div className="relative flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
         {/* Clean standalone app mark */}
         <div className="relative mb-7">
-          <RoseOneSymbol size={104} animated={false} glow={false} />
+          <RoseOneLogo variant="primary" size="2xl" showTagline={false} animated={false} />
         </div>
-
-        {/* Brand Wordmark */}
-        <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white mb-2">
-          Gist
-          <span
-            className="bg-clip-text text-transparent"
-            style={{
-              backgroundImage:
-                'linear-gradient(90deg, var(--brand-accent, #E91E8C), var(--brand-accent-dark, #BE185D))',
-            }}
-          >
-            upp
-          </span>
-        </h1>
 
         {/* Tagline */}
         <p className="text-xs sm:text-sm font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-400 mb-8">
-          Your world. One conversation.
+          Your world. Your people.
         </p>
 
         {/* Subtle, refined loading bar */}
