@@ -258,6 +258,28 @@ export class PersistentStorage {
    */
   private durableRefreshPromise: Promise<void> = Promise.resolve();
 
+  /** Acquire a database-backed lease so separate Render instances cannot overwrite one another's snapshot. */
+  public async acquireDurableWriteLock(): Promise<string> {
+    if (!this.durableClient || !this.durableInitialized) return '';
+    const owner = crypto.randomUUID();
+    const deadline = Date.now() + 30000;
+    while (Date.now() < deadline) {
+      const { data, error } = await this.durableClient.rpc('gistupp_acquire_app_lock', { p_owner: owner });
+      if (error) throw new Error(`[storage] Could not acquire shared write lock: ${error.message}`);
+      if (data === true) return owner;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    throw new Error('[storage] Shared database is busy. Please retry your action.');
+  }
+
+  public async releaseDurableWriteLock(owner: string): Promise<void> {
+    if (!owner || !this.durableClient) return;
+    const { data, error } = await this.durableClient.rpc('gistupp_release_app_lock', { p_owner: owner });
+    if (error || data !== true) {
+      console.error('[storage] Shared write lock release failed:', error?.message || 'lock ownership changed');
+    }
+  }
+
   public async refreshDurable(): Promise<void> {
     if (!this.durableClient || !this.durableInitialized) return;
     const refresh = this.durableRefreshPromise.catch(() => undefined).then(async () => {
