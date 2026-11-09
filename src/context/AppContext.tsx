@@ -157,7 +157,7 @@ interface AppContextType {
 
   // Creator
   products: Product[];
-  addProduct: (product: Omit<Product, 'id' | 'salesCount' | 'rating'>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'salesCount' | 'rating'>) => Promise<void>;
   analytics: CreatorAnalytics;
 
   // Marketplace
@@ -1948,15 +1948,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [products]);
 
-  const addProduct = (prod: Omit<Product, 'id' | 'salesCount' | 'rating'>) => {
-    const newProd: Product = {
-      ...prod,
-      id: `prod_${Date.now()}`,
-      salesCount: 0,
-      rating: 5.0,
-    };
-    setProducts((prev) => [newProd, ...prev]);
-    showToast('Product added to your Gistupp Store!', 'success');
+  const addProduct = async (prod: Omit<Product, 'id' | 'salesCount' | 'rating'>): Promise<void> => {
+    dataMutationVersionRef.current += 1;
+    try {
+      const savedProduct = await api.createProduct(prod);
+      setProducts((prev) => [savedProduct, ...prev.filter((item) => item.id !== savedProduct.id)]);
+      showToast('Product added and saved to your Gistupp Store!', 'success');
+    } catch (error) {
+      console.error('Creator product save failed:', error);
+      showToast(error instanceof Error ? error.message : 'Product could not be saved. Please retry.', 'error');
+    }
   };
 
   // Marketplace listings are member-created; remove any legacy sample records
@@ -2392,6 +2393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (Array.isArray(data.conversations)) setConversations(data.conversations);
         if (Array.isArray(data.communities)) setCommunities(data.communities);
         if (Array.isArray(data.marketplaceListings)) setMarketplaceListings(data.marketplaceListings);
+        if (Array.isArray(data.products)) setProducts(data.products);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
         if (Array.isArray(data.reportedItems)) setReportedItems(data.reportedItems);
         if (Array.isArray(data.allUsers) && data.allUsers.length > 0) setAllUsers(data.allUsers);
