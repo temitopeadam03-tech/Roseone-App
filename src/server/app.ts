@@ -916,6 +916,22 @@ export function createExpressApp() {
     }
   });
 
+  app.post('/api/conversations/group', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const participantIds = Array.isArray(req.body?.participantIds)
+        ? req.body.participantIds.map((id: unknown) => String(id)).filter(Boolean)
+        : [];
+      const title = String(req.body?.title || '').trim();
+      const initialMessage = String(req.body?.initialMessage || '');
+      const conversation = storage.createGroupConversation(authUser.id, participantIds, title, initialMessage);
+      res.status(201).json({ success: true, conversation });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not create group chat.' });
+    }
+  });
+
   app.get('/api/conversations/:id/messages', (req: Request, res: Response) => {
     try {
       const messages = storage.getMessages(req.params.id);
