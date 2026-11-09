@@ -9,6 +9,7 @@ import {
   Conversation,
   Message,
   Community,
+  Channel,
   Product,
   NotificationItem,
   UserSettings,
@@ -31,6 +32,7 @@ export interface DatabaseSchema {
   stories: Story[];
   conversations: Conversation[];
   communities: Community[];
+  channels?: Channel[];
   products: Product[];
   marketplaceListings: MarketplaceListing[];
   marketplaceStores?: MarketplaceStore[];
@@ -64,6 +66,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   stories: [],
   conversations: [],
   communities: [],
+  channels: [],
   products: [],
   marketplaceListings: [],
   marketplaceStores: [],
@@ -122,6 +125,7 @@ const cleanLegacyDatabase = (source: DatabaseSchema): DatabaseSchema => {
   db.blockedUsers = db.blockedUsers || {};
   db.mutedUsers = db.mutedUsers || {};
   db.savedPosts = db.savedPosts || {};
+  db.channels = db.channels || [];
   db.products = db.products || [];
   db.marketplaceListings = db.marketplaceListings || [];
   db.marketplaceStores = db.marketplaceStores || [];
@@ -364,6 +368,7 @@ export class PersistentStorage {
         c.participants.some((p) => p.id === currentUserId)
       ),
       communities: this.db.communities,
+      channels: this.getChannels(currentUserId),
       marketplaceListings: this.db.marketplaceListings,
       products: this.db.products || [],
       notifications: userNotifs,
@@ -372,6 +377,80 @@ export class PersistentStorage {
       blockedUserIds: this.db.blockedUsers[currentUserId] || [],
       mutedUserIds: this.db.mutedUsers[currentUserId] || [],
     };
+  }
+
+  // --- Standalone Channels ---
+  public getChannels(userId: string): Channel[] {
+    return (this.db.channels || [])
+      .filter((channel) => !channel.isPrivate || channel.ownerId === userId || channel.adminIds.includes(userId) || channel.subscriberIds.includes(userId))
+      .map((channel) => ({ ...channel, isSubscribed: channel.ownerId === userId || channel.subscriberIds.includes(userId) }));
+  }
+
+  public createChannel(ownerId: string, data: { name: string; description: string; isPrivate?: boolean; avatar?: string; coverImage?: string }): Channel {
+    const owner = this.getUserById(ownerId);
+    if (!owner) throw new Error('Channel owner not found.');
+    const name = String(data.name || '').trim();
+    if (name.length < 2) throw new Error('Channel name must be at least 2 characters.');
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    if ((this.db.channels || []).some((channel) => channel.slug === slug)) throw new Error('A channel with this name already exists.');
+    const channel: Channel = {
+      id: `channel_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      slug,
+      description: String(data.description || '').trim(),
+      avatar: data.avatar || '',
+      coverImage: data.coverImage || '',
+      owner,
+      ownerId,
+      adminIds: [ownerId],
+      subscriberIds: [],
+      isPrivate: !!data.isPrivate,
+      posts: [],
+      createdAt: new Date().toISOString(),
+      isSubscribed: true,
+    };
+    this.db.channels = this.db.channels || [];
+    this.db.channels.unshift(channel);
+    this.schedulePersist();
+    return channel;
+  }
+
+  public toggleChannelSubscription(channelId: string, userId: string): Channel {
+    const channel = (this.db.channels || []).find((item) => item.id === channelId);
+    if (!channel) throw new Error('Channel not found.');
+    if (channel.ownerId === userId) return { ...channel, isSubscribed: true };
+    const index = channel.subscriberIds.indexOf(userId);
+    if (index >= 0) channel.subscriberIds.splice(index, 1);
+    else channel.subscriberIds.push(userId);
+    this.schedulePersist();
+    return { ...channel, isSubscribed: index < 0 };
+  }
+
+  public createChannelPost(channelId: string, authorId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video'): Channel {
+    const channel = (this.db.channels || []).find((item) => item.id === channelId);
+    const author = this.getUserById(authorId);
+    if (!channel || !author) throw new Error('Channel or author not found.');
+    if (channel.ownerId !== authorId && !channel.adminIds.includes(authorId)) throw new Error('Only channel admins can publish posts.');
+    if (!content.trim() && !mediaUrl) throw new Error('Add text or media before publishing.');
+    channel.posts.unshift({
+      id: `channel_post_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      author,
+      content: content.trim(),
+      mediaUrl,
+      mediaType,
+      createdAt: new Date().toISOString(),
+      createdTimestamp: Date.now(),
+    });
+    this.schedulePersist();
+    return channel;
+  }
+
+  public deleteChannel(channelId: string, userId: string): void {
+    const channel = (this.db.channels || []).find((item) => item.id === channelId);
+    if (!channel) throw new Error('Channel not found.');
+    if (channel.ownerId !== userId) throw new Error('Only the channel owner can delete this channel.');
+    this.db.channels = (this.db.channels || []).filter((item) => item.id !== channelId);
+    this.schedulePersist();
   }
 
   // --- Users & Profiles ---
