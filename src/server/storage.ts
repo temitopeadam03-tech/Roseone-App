@@ -365,6 +365,7 @@ export class PersistentStorage {
       ),
       communities: this.db.communities,
       marketplaceListings: this.db.marketplaceListings,
+      products: this.db.products || [],
       notifications: userNotifs,
       reportedItems: this.db.reportedItems,
       settings: userSettings,
@@ -1241,6 +1242,23 @@ export class PersistentStorage {
 
     this.schedulePersist();
     return true;
+  }
+
+  // --- Creator store products ---
+  public createProduct(ownerId: string, data: Omit<Product, 'id' | 'salesCount' | 'rating'>): Product {
+    const owner = this.getUserById(ownerId);
+    if (!owner) throw new Error('Please sign in before adding a store item.');
+    const product: Product = {
+      ...data,
+      id: `prod_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      ownerId,
+      salesCount: 0,
+      rating: 5,
+    };
+    this.db.products = this.db.products || [];
+    this.db.products.unshift(product);
+    this.schedulePersist();
+    return product;
   }
 
   // --- Marketplace ---
