@@ -122,6 +122,7 @@ interface AppContextType {
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
   sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number) => Promise<void>;
+  setDisappearingMessages: (conversationId: string, seconds: number) => Promise<void>;
   startNewConversation: (recipientName: string, recipientHandle: string, initialMessage?: string) => Promise<void>;
   togglePinMessage: (conversationId: string, messageId: string) => void;
   reactToMessage: (conversationId: string, messageId: string, emoji: string) => void;
@@ -1430,6 +1431,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const setDisappearingMessages = async (conversationId: string, seconds: number): Promise<void> => {
+    try {
+      dataMutationVersionRef.current += 1;
+      const updated = await api.setDisappearingMessages(conversationId, seconds);
+      setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
+        ? { ...conversation, disappearingMessagesSeconds: updated.disappearingMessagesSeconds || 0 }
+        : conversation));
+      const label = seconds === 0 ? 'Off' : seconds === 86400 ? '24 hours' : seconds === 604800 ? '7 days' : '90 days';
+      showToast(`Disappearing messages set to ${label}.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not update disappearing-message timer.', 'error');
+    }
+  };
+
   const togglePinMessage = async (conversationId: string, messageId: string) => {
     try {
       dataMutationVersionRef.current += 1;
@@ -2582,6 +2597,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeConversationId,
         setActiveConversationId,
         sendMessage,
+        setDisappearingMessages,
         startNewConversation,
         togglePinMessage,
         reactToMessage,
