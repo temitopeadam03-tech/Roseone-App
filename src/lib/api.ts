@@ -186,6 +186,11 @@ class ApiClient {
     return res.isSaved;
   }
 
+  public async recordPostShare(postId: string): Promise<number> {
+    const res = await this.request<{ success: boolean; sharesCount: number }>(`/api/posts/${postId}/share`, { method: 'POST' });
+    return res.sharesCount;
+  }
+
   public async toggleRepostPost(postId: string): Promise<Post> {
     const res = await this.request<{ success: boolean; post: Post }>(`/api/posts/${postId}/repost`, { method: 'POST' });
     return res.post;
