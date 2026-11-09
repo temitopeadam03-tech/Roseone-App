@@ -1430,39 +1430,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const togglePinMessage = (conversationId: string, messageId: string) => {
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id === conversationId) {
-          const target = c.messages.find((m) => m.id === messageId);
-          const isCurrentlyPinned = c.pinnedMessage?.id === messageId;
-          return {
-            ...c,
-            pinnedMessage: isCurrentlyPinned ? undefined : target,
-          };
-        }
-        return c;
-      })
-    );
-    showToast('Message pin status updated', 'info');
+  const togglePinMessage = async (conversationId: string, messageId: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      await api.togglePinMessage(conversationId, messageId);
+      setConversations((prev) => prev.map((conversation) => {
+        if (conversation.id !== conversationId) return conversation;
+        const target = conversation.messages.find((message) => message.id === messageId);
+        const isCurrentlyPinned = conversation.pinnedMessage?.id === messageId;
+        return { ...conversation, pinnedMessage: isCurrentlyPinned ? undefined : target };
+      }));
+      showToast('Message pin status saved.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not save pinned message.', 'error');
+    }
   };
 
-  const reactToMessage = (conversationId: string, messageId: string, emoji: string) => {
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id === conversationId) {
-          return {
-            ...c,
-            messages: c.messages.map((m) =>
-              m.id === messageId
-                ? { ...m, reaction: m.reaction === emoji ? undefined : emoji }
-                : m
-            ),
-          };
-        }
-        return c;
-      })
-    );
+  const reactToMessage = async (conversationId: string, messageId: string, emoji: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      await api.reactToMessage(conversationId, messageId, emoji);
+      setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
+        ? { ...conversation, messages: conversation.messages.map((message) =>
+            message.id === messageId ? { ...message, reaction: message.reaction === emoji ? undefined : emoji } : message
+          ) }
+        : conversation));
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not save message reaction.', 'error');
+    }
   };
 
   // Communities: Genuine communities
