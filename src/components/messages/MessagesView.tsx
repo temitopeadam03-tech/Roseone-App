@@ -101,7 +101,7 @@ export const MessagesView: React.FC = () => {
     if (!cleanText || !activeConversation || isSendingMessage) return;
     setIsSendingMessage(true);
     const sent = await sendMessage(activeConversation.id, cleanText);
-    if (sent) setMessageText('');
+    if (sent) setMessageText((current) => current.trim() === cleanText ? '' : current);
     setIsSendingMessage(false);
   };
 
