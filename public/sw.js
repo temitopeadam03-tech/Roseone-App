@@ -1,5 +1,5 @@
-const CACHE_NAME = 'gistupp-shell-v1';
-const APP_SHELL = ['/', '/site.webmanifest', '/favicon.svg'];
+const CACHE_NAME = 'gistupp-shell-v2-brand';
+const APP_SHELL = ['/', '/site.webmanifest', '/favicon.svg', '/gistupp-logo.svg'];
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
 });
