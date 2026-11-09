@@ -5,6 +5,7 @@ import {
   Conversation,
   Message,
   Community,
+  Channel,
   Product,
   NotificationItem,
   UserSettings,
@@ -357,6 +358,37 @@ class ApiClient {
       { method: 'PUT', body: JSON.stringify({ seconds }) }
     );
     return res.conversation;
+  }
+
+  // Standalone Channels
+  public async getChannels(): Promise<Channel[]> {
+    const res = await this.request<{ success: boolean; channels: Channel[] }>('/api/channels');
+    return res.channels;
+  }
+
+  public async createChannel(data: { name: string; description: string; isPrivate?: boolean }): Promise<Channel> {
+    const res = await this.request<{ success: boolean; channel: Channel }>('/api/channels', {
+      method: 'POST', body: JSON.stringify(data),
+    });
+    return res.channel;
+  }
+
+  public async toggleChannelSubscription(channelId: string): Promise<Channel> {
+    const res = await this.request<{ success: boolean; channel: Channel }>(`/api/channels/${channelId}/subscribe`, {
+      method: 'POST',
+    });
+    return res.channel;
+  }
+
+  public async createChannelPost(channelId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video'): Promise<Channel> {
+    const res = await this.request<{ success: boolean; channel: Channel }>(`/api/channels/${channelId}/posts`, {
+      method: 'POST', body: JSON.stringify({ content, mediaUrl, mediaType }),
+    });
+    return res.channel;
+  }
+
+  public async deleteChannel(channelId: string): Promise<void> {
+    await this.request<{ success: boolean }>(`/api/channels/${channelId}`, { method: 'DELETE' });
   }
 
   public async markConversationRead(conversationId: string) {
