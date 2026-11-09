@@ -20,7 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { Conversation, Message } from '../../types';
+import { Conversation, Message, Channel } from '../../types';
 import { Avatar } from '../ui/Avatar';
 import { CommunitiesView } from '../communities/CommunitiesView';
 import { CommunityDashboard } from '../communities/CommunityDashboard';
@@ -41,10 +41,21 @@ export const MessagesView: React.FC = () => {
     uploadMedia,
     showToast,
     communities,
+    channels,
+    createChannel,
+    toggleChannelSubscription,
+    createChannelPost,
+    deleteChannel,
   } = useApp();
 
   const [hubSection, setHubSection] = useState<'messaging' | 'communities' | 'channels'>('messaging');
   const [channelCommunityId, setChannelCommunityId] = useState<string | null>(null);
+  const [selectedStandaloneChannelId, setSelectedStandaloneChannelId] = useState<string | null>(null);
+  const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
+  const [newChannelName, setNewChannelName] = useState('');
+  const [newChannelDescription, setNewChannelDescription] = useState('');
+  const [newChannelIsPrivate, setNewChannelIsPrivate] = useState(false);
+  const [channelPostDraft, setChannelPostDraft] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [messageText, setMessageText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -170,7 +181,7 @@ export const MessagesView: React.FC = () => {
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const selectedChannelCommunity = communities.find((community) => community.id === channelCommunityId);
+  const selectedChannel = channels.find((channel) => channel.id === selectedStandaloneChannelId);
 
   return (
     <div className="space-y-3">
@@ -183,12 +194,64 @@ export const MessagesView: React.FC = () => {
         </div>
       </div>
       {hubSection === "communities" ? <CommunitiesView /> : hubSection === "channels" ? (
-        selectedChannelCommunity ? <CommunityDashboard community={selectedChannelCommunity} onBack={() => setChannelCommunityId(null)} /> : (
-          <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-4 sm:p-5 space-y-4">
-            <div><h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Channels</h2><p className="text-xs text-slate-500 mt-1">Discover announcement and discussion channels across your communities.</p></div>
-            {communities.length === 0 ? <div className="py-12 text-center"><Hash className="w-10 h-10 mx-auto text-slate-300 mb-2"/><p className="font-bold text-sm text-slate-800 dark:text-white">No community channels yet</p><p className="text-xs text-slate-500 mt-1">Create a community first, then add channels for focused discussions.</p></div> : <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{communities.flatMap((community) => (community.channels || []).map((channel) => ({ community, channel }))).map(({community, channel}) => <button key={community.id + "-" + channel} onClick={() => setChannelCommunityId(community.id)} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left hover:border-[#E91E8C]/60 hover:bg-pink-50/40 dark:hover:bg-pink-950/10 transition-colors"><div className="flex items-center gap-2"><span className="w-9 h-9 rounded-xl bg-pink-100 dark:bg-pink-950/40 text-[#BE185D] flex items-center justify-center"><Hash className="w-4 h-4"/></span><div className="min-w-0 flex-1"><p className="font-bold text-sm text-slate-900 dark:text-white">#{channel}</p><p className="text-[11px] text-slate-500">{community.name}</p></div><ArrowLeft className="w-4 h-4 rotate-180 text-slate-400"/></div></button>)}</div>}
-          </section>
-        )
+        <section className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#17131A] p-4 sm:p-5 space-y-4">
+          {selectedChannel ? (
+            <>
+              <button onClick={() => setSelectedStandaloneChannelId(null)} className="text-xs font-bold text-[#BE185D] hover:underline">← All channels</button>
+              <div className="flex items-start gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-pink-100 dark:bg-pink-950/40 text-[#BE185D] flex items-center justify-center"><Megaphone className="w-5 h-5" /></div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">{selectedChannel.name}</h2>
+                  <p className="text-xs text-slate-500 mt-1">{selectedChannel.description || 'GistUpp channel'} · {selectedChannel.subscriberIds.length} subscribers</p>
+                </div>
+                {selectedChannel.ownerId !== currentUser.id && (
+                  <button onClick={() => void toggleChannelSubscription(selectedChannel.id)} className="rounded-xl px-3 py-2 text-xs font-bold bg-[#E91E8C] text-white">{selectedChannel.isSubscribed ? 'Following' : 'Follow'}</button>
+                )}
+                {selectedChannel.ownerId === currentUser.id && (
+                  <button onClick={() => void deleteChannel(selectedChannel.id)} className="rounded-xl px-3 py-2 text-xs font-bold border border-rose-200 text-rose-600">Delete</button>
+                )}
+              </div>
+              {selectedChannel.ownerId === currentUser.id && (
+                <form onSubmit={(event) => { event.preventDefault(); if (!channelPostDraft.trim()) return; void createChannelPost(selectedChannel.id, channelPostDraft.trim()); setChannelPostDraft(''); }} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-2">
+                  <textarea value={channelPostDraft} onChange={(event) => setChannelPostDraft(event.target.value)} rows={3} placeholder="Write an announcement for your subscribers..." className="w-full resize-none bg-transparent text-sm text-slate-900 dark:text-white outline-none" />
+                  <div className="flex justify-end"><button type="submit" disabled={!channelPostDraft.trim()} className="rounded-lg px-4 py-2 text-xs font-bold bg-[#E91E8C] text-white disabled:opacity-50">Publish update</button></div>
+                </form>
+              )}
+              <div className="space-y-3">
+                {selectedChannel.posts.length === 0 ? <div className="py-12 text-center text-sm text-slate-500">No channel updates yet.</div> : selectedChannel.posts.map((post) => (
+                  <article key={post.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="flex items-center gap-2 mb-2"><Avatar src={post.author.avatar} name={post.author.name} size="xs" /><span className="text-xs font-bold text-slate-800 dark:text-white">{post.author.name}</span><span className="text-[10px] text-slate-400">{new Date(post.createdTimestamp).toLocaleString()}</span></div>
+                    <p className="text-sm whitespace-pre-wrap text-slate-800 dark:text-slate-200">{post.content}</p>
+                    {post.mediaUrl && (post.mediaType === 'video' ? <video src={post.mediaUrl} controls playsInline className="mt-3 w-full max-h-80 rounded-xl bg-black" /> : <img src={post.mediaUrl} alt="Channel attachment" className="mt-3 w-full max-h-80 object-cover rounded-xl" />)}
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div><h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Channels</h2><p className="text-xs text-slate-500 mt-1">Independent spaces for official updates and broadcasts.</p></div>
+                <button onClick={() => setIsCreateChannelOpen(true)} className="rounded-xl px-3 py-2 text-xs font-bold bg-[#E91E8C] text-white">+ Create channel</button>
+              </div>
+              {channels.length === 0 ? <div className="py-12 text-center"><Megaphone className="w-10 h-10 mx-auto text-slate-300 mb-2" /><p className="font-bold text-sm text-slate-800 dark:text-white">No channels yet</p><p className="text-xs text-slate-500 mt-1">Create the first channel and start sharing updates.</p></div> : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {channels.map((channel) => <button key={channel.id} onClick={() => setSelectedStandaloneChannelId(channel.id)} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 text-left hover:border-[#E91E8C]/60 transition-colors"><div className="flex items-center gap-3"><span className="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-950/40 text-[#BE185D] flex items-center justify-center"><Megaphone className="w-4 h-4" /></span><span className="min-w-0 flex-1"><span className="block font-bold text-sm text-slate-900 dark:text-white truncate">{channel.name}</span><span className="block text-[11px] text-slate-500 truncate">{channel.description || 'GistUpp channel'}</span></span></div><div className="mt-3 flex items-center justify-between text-[10px] text-slate-500"><span>{channel.subscriberIds.length} subscribers · {channel.posts.length} updates</span><span>{channel.ownerId === currentUser.id ? 'Owner' : channel.isSubscribed ? 'Following' : 'View channel'}</span></div></button>)}
+                </div>
+              )}
+              {isCreateChannelOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                  <form onSubmit={(event) => { event.preventDefault(); void createChannel({ name: newChannelName, description: newChannelDescription, isPrivate: newChannelIsPrivate }); setIsCreateChannelOpen(false); setNewChannelName(''); setNewChannelDescription(''); setNewChannelIsPrivate(false); }} className="w-full max-w-md rounded-2xl bg-white dark:bg-[#17131A] border border-slate-200 dark:border-slate-700 p-5 space-y-3">
+                    <div className="flex items-center justify-between"><h3 className="font-extrabold text-slate-900 dark:text-white">Create a channel</h3><button type="button" onClick={() => setIsCreateChannelOpen(false)}><X className="w-4 h-4" /></button></div>
+                    <input required minLength={2} maxLength={48} value={newChannelName} onChange={(event) => setNewChannelName(event.target.value)} placeholder="Channel name" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent p-3 text-sm text-slate-900 dark:text-white" />
+                    <textarea value={newChannelDescription} onChange={(event) => setNewChannelDescription(event.target.value)} rows={3} placeholder="What is this channel about?" className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-transparent p-3 text-sm text-slate-900 dark:text-white" />
+                    <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300"><input type="checkbox" checked={newChannelIsPrivate} onChange={(event) => setNewChannelIsPrivate(event.target.checked)} /> Private channel (owner and subscribers only)</label>
+                    <div className="flex gap-2"><button type="button" onClick={() => setIsCreateChannelOpen(false)} className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 py-2 text-xs font-bold">Cancel</button><button type="submit" className="flex-1 rounded-xl bg-[#E91E8C] py-2 text-xs font-bold text-white">Create channel</button></div>
+                  </form>
+                </div>
+              )}
+            </>
+          )}
+        </section>
       ) : (
     <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden h-[calc(100vh-210px)] min-h-[500px] flex">
 
