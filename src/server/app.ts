@@ -1183,6 +1183,18 @@ export function createExpressApp() {
     }
   });
 
+  // --- Creator products ---
+  app.post('/api/products', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const product = storage.createProduct(authUser.id, req.body?.data || {});
+      res.status(201).json({ success: true, product });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Product could not be saved.' });
+    }
+  });
+
   // --- Marketplace ---
   app.post('/api/marketplace', async (req: Request, res: Response) => {
     try {
