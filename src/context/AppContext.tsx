@@ -124,6 +124,7 @@ interface AppContextType {
   sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number) => Promise<void>;
   setDisappearingMessages: (conversationId: string, seconds: number) => Promise<void>;
   startNewConversation: (recipientName: string, recipientHandle: string, initialMessage?: string) => Promise<void>;
+  createGroupConversation: (title: string, participantIds: string[], initialMessage?: string) => Promise<void>;
   togglePinMessage: (conversationId: string, messageId: string) => void;
   reactToMessage: (conversationId: string, messageId: string, emoji: string) => void;
 
@@ -1413,6 +1414,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const createGroupConversation = async (title: string, participantIds: string[], initialMessage?: string): Promise<void> => {
+    try {
+      dataMutationVersionRef.current += 1;
+      const savedConversation = await api.createGroupConversation(title, participantIds, initialMessage);
+      setConversations((prev) => [savedConversation, ...prev.filter((item) => item.id !== savedConversation.id)]);
+      setActiveConversationId(savedConversation.id);
+      setActiveView('feed');
+      setActiveTab('messages');
+      showToast('Group conversation created and saved.', 'success');
+    } catch (error) {
+      console.error('Group conversation creation failed:', error);
+      showToast(error instanceof Error ? error.message : 'Group chat could not be saved. Please retry.', 'error');
+    }
+  };
+
   const sendMessage = async (
     conversationId: string,
     text: string,
@@ -2599,6 +2615,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         sendMessage,
         setDisappearingMessages,
         startNewConversation,
+        createGroupConversation,
         togglePinMessage,
         reactToMessage,
         communities,
