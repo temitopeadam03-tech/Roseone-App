@@ -735,6 +735,17 @@ export function createExpressApp() {
     }
   });
 
+  app.post('/api/posts/:id/share', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const post = storage.recordPostShare(req.params.id);
+      res.json({ success: true, sharesCount: post.sharesCount || 0 });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Share could not be recorded.' });
+    }
+  });
+
   app.post('/api/posts/:id/repost', (req: Request, res: Response) => {
     try {
       const authUser = getAuthUser(req);
