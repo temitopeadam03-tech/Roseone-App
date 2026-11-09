@@ -14,6 +14,9 @@ export function createExpressApp() {
   app.use(async (_req: Request, _res: Response, next: NextFunction) => {
     try {
       await storage.initializeDurable();
+      // Rehydrate from Supabase on every request so phone/laptop requests
+      // handled by different Render instances see the same latest snapshot.
+      if (_req.path.startsWith('/api/')) await storage.refreshDurable();
       next();
     } catch (error) {
       console.error('[storage] Durable database initialization failed:', error);
