@@ -58,14 +58,18 @@ export const MarketplaceView: React.FC = () => {
   const [storeSearch, setStoreSearch] = useState('');
   const [showCreateStore, setShowCreateStore] = useState(false);
   const [storeSaving, setStoreSaving] = useState(false);
+  const storeLoadVersionRef = useRef(0);
   const [storeForm, setStoreForm] = useState({ name: '', description: '', category: '', location: '' });
 
   const loadStores = async (query = '') => {
+    const requestVersion = ++storeLoadVersionRef.current;
     try {
       const results = await api.getStores(query);
-      setStores(results);
+      if (requestVersion === storeLoadVersionRef.current) setStores(results);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not load stores.', 'error');
+      if (requestVersion === storeLoadVersionRef.current) {
+        showToast(error instanceof Error ? error.message : 'Could not load stores.', 'error');
+      }
     }
   };
 
@@ -77,8 +81,10 @@ export const MarketplaceView: React.FC = () => {
     setStoreSaving(true);
     try {
       const store = await api.createStore(storeForm);
+      ++storeLoadVersionRef.current;
       setStores((current) => [store, ...current.filter((item) => item.id !== store.id)]);
       setStoreForm({ name: '', description: '', category: '', location: '' });
+      await loadStores();
       setShowCreateStore(false);
       showToast('Store created successfully.', 'success');
     } catch (error) {
