@@ -62,6 +62,7 @@ export const MessagesView: React.FC = () => {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [activeReactionMessageId, setActiveReactionMessageId] = useState<string | null>(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   // New message modal
   const [newChatModalOpen, setNewChatModalOpen] = useState(false);
@@ -94,11 +95,14 @@ export const MessagesView: React.FC = () => {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const handleSendText = (e: React.FormEvent) => {
+  const handleSendText = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim() || !activeConversation) return;
-    sendMessage(activeConversation.id, messageText.trim());
-    setMessageText('');
+    const cleanText = messageText.trim();
+    if (!cleanText || !activeConversation || isSendingMessage) return;
+    setIsSendingMessage(true);
+    const sent = await sendMessage(activeConversation.id, cleanText);
+    if (sent) setMessageText('');
+    setIsSendingMessage(false);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -634,7 +638,7 @@ export const MessagesView: React.FC = () => {
 
                 <button
                   type="submit"
-                  disabled={!messageText.trim()}
+                  disabled={!messageText.trim() || isSendingMessage}
                   className="min-h-[44px] min-w-[44px] rounded-xl bg-[#E91E8C] disabled:opacity-40 text-white flex items-center justify-center hover:bg-[#BE185D] transition-colors"
                 >
                   <Send className="w-4 h-4" />
