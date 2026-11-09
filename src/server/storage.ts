@@ -364,9 +364,7 @@ export class PersistentStorage {
       posts: this.db.posts,
       comments: this.db.comments,
       stories: activeStories,
-      conversations: this.db.conversations.filter((c) =>
-        c.participants.some((p) => p.id === currentUserId)
-      ),
+      conversations: this.getConversations(currentUserId),
       communities: this.db.communities,
       channels: this.getChannels(currentUserId),
       marketplaceListings: this.db.marketplaceListings,
