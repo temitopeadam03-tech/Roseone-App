@@ -290,6 +290,7 @@ export interface Community {
 
 export interface Product {
   id: string;
+  ownerId?: string;
   title: string;
   description: string;
   price: number;
