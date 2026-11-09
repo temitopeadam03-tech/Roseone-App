@@ -42,6 +42,7 @@ export interface DatabaseSchema {
   blockedUsers: Record<string, string[]>;
   mutedUsers: Record<string, string[]>;
   savedPosts?: Record<string, string[]>;
+  repostedPosts?: Record<string, string[]>;
 }
 
 const isServerless = !!(
@@ -76,6 +77,7 @@ const getInitialDatabase = (): DatabaseSchema => ({
   blockedUsers: {},
   mutedUsers: {},
   savedPosts: {},
+  repostedPosts: {},
 });
 
 const LEGACY_DEMO_USER_IDS = new Set(['user_clara', 'user_mateo', 'user_sophia', 'user_roseone']);
@@ -125,6 +127,7 @@ const cleanLegacyDatabase = (source: DatabaseSchema): DatabaseSchema => {
   db.blockedUsers = db.blockedUsers || {};
   db.mutedUsers = db.mutedUsers || {};
   db.savedPosts = db.savedPosts || {};
+  db.repostedPosts = db.repostedPosts || {};
   db.channels = db.channels || [];
   db.products = db.products || [];
   db.marketplaceListings = db.marketplaceListings || [];
@@ -392,7 +395,13 @@ export class PersistentStorage {
     return {
       currentUser: user,
       allUsers: this.db.users,
-      posts: this.db.posts,
+      posts: this.db.posts.map((post) => ({
+        ...post,
+        isSaved: (this.db.savedPosts?.[currentUserId] || []).includes(post.id),
+        isReposted: (this.db.repostedPosts?.[currentUserId] || []).includes(post.id),
+        isLiked: Boolean(post.reactions?.[currentUserId]),
+        userReaction: post.reactions?.[currentUserId],
+      })),
       comments: this.db.comments,
       stories: activeStories,
       conversations: this.getConversations(currentUserId),
@@ -760,6 +769,61 @@ export class PersistentStorage {
     return !isSaved;
   }
 
+  public toggleRepostPost(postId: string, userId: string): Post {
+    const post = this.db.posts.find((item) => item.id === postId);
+    if (!post) throw new Error('Post not found');
+    if (!this.db.repostedPosts) this.db.repostedPosts = {};
+    if (!this.db.repostedPosts[userId]) this.db.repostedPosts[userId] = [];
+    const reposts = this.db.repostedPosts[userId];
+    const existingIndex = reposts.indexOf(postId);
+    if (existingIndex >= 0) {
+      reposts.splice(existingIndex, 1);
+      post.repostsCount = Math.max(0, (post.repostsCount || 0) - 1);
+    } else {
+      reposts.push(postId);
+      post.repostsCount = (post.repostsCount || 0) + 1;
+    }
+    post.isReposted = existingIndex < 0;
+    this.schedulePersist();
+    return post;
+  }
+
+  public createQuoteReshare(originalPostId: string, userId: string, caption: string): Post {
+    const original = this.db.posts.find((item) => item.id === originalPostId);
+    const author = this.getUserById(userId);
+    if (!original || !author) throw new Error('Post or author not found');
+    if (!this.db.repostedPosts) this.db.repostedPosts = {};
+    if (!this.db.repostedPosts[userId]) this.db.repostedPosts[userId] = [];
+    if (!this.db.repostedPosts[userId].includes(originalPostId)) {
+      this.db.repostedPosts[userId].push(originalPostId);
+      original.repostsCount = (original.repostsCount || 0) + 1;
+    }
+    original.isReposted = true;
+    const now = Date.now();
+    const reshared: Post = {
+      id: `post_${now}_${Math.random().toString(36).slice(2, 7)}`,
+      author,
+      content: caption.trim(),
+      resharedPost: { ...original },
+      createdAt: 'Just now',
+      createdTimestamp: now,
+      likesCount: 0,
+      reactions: {},
+      reactionCounts: {},
+      commentsCount: 0,
+      repostsCount: 0,
+      viewsCount: 1,
+      isLiked: false,
+      isSaved: false,
+      isReposted: false,
+      tags: original.tags || [],
+    };
+    this.db.posts.unshift(reshared);
+    author.postsCount = (author.postsCount || 0) + 1;
+    this.schedulePersist();
+    return reshared;
+  }
+
   public votePoll(postId: string, userId: string, optionId: string): Post {
     const post = this.db.posts.find((p) => p.id === postId);
     if (!post || !post.poll) throw new Error('Poll not found');
@@ -1104,7 +1168,10 @@ export class PersistentStorage {
   public getConversations(userId: string): Conversation[] {
     let changed = false;
     const conversations = this.db.conversations.filter((c) => c.participants.some((p) => p.id === userId));
-    conversations.forEach((conversation) => { if (this.removeExpiredMessages(conversation)) changed = true; });
+    conversations.forEach((conversation) => {
+      if (this.removeExpiredMessages(conversation)) changed = true;
+      conversation.messages.sort((a, b) => (a.timestamp || a.createdTimestamp || 0) - (b.timestamp || b.createdTimestamp || 0));
+    });
     if (changed) this.schedulePersist();
     return conversations;
   }
@@ -1145,7 +1212,11 @@ export class PersistentStorage {
     const now = Date.now();
     const message: Message = {
       id: `msg_${now}_${Math.random().toString(36).substring(2, 6)}`,
+      chatId: conversationId,
       senderId,
+      receiverId: conversation?.participants.find((participant) => participant.id !== senderId)?.id,
+      timestamp: now,
+      createdTimestamp: now,
       text: text || '',
       mediaUrl: effectiveMediaUrl,
       mediaType,
@@ -1162,6 +1233,7 @@ export class PersistentStorage {
     }
 
     conversation.messages.push(message);
+    conversation.messages.sort((a, b) => (a.timestamp || a.createdTimestamp || 0) - (b.timestamp || b.createdTimestamp || 0));
     conversation.lastMessageTime = 'Just now';
     conversation.unreadCount = (conversation.unreadCount || 0) + 1;
 
