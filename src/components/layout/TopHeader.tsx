@@ -67,7 +67,7 @@ export const TopHeader: React.FC = () => {
             className="flex min-w-max items-center shrink-0 cursor-pointer"
             aria-label="Gistupp Home"
           >
-            <RoseOneLogo variant="symbol" size="lg" showTagline={false} />
+            <RoseOneLogo variant="horizontal" size="lg" showTagline={false} animated={false} />
           </a>
         </div>
 
