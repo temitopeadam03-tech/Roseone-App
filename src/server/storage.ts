@@ -1342,16 +1342,20 @@ export class PersistentStorage {
   // --- Communities ---
   public createCommunity(data: Partial<Community> & { name: string; description: string; ownerId?: string }): Community {
     const now = Date.now();
+    const ownerId = data.ownerId || (data as any).createdBy;
     const newCommunity: Community = {
+      ...data,
       id: `comm_${now}_${Math.random().toString(36).substring(2, 6)}`,
       type: data.type || 'community',
       name: data.name,
-      slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+      slug: data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description: data.description,
-      avatar: data.avatar || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&auto=format&fit=crop&q=80',
-      coverImage: data.coverImage || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&auto=format&fit=crop&q=80',
+      avatar: data.avatar || '',
+      coverImage: data.coverImage || '',
       category: data.category || 'General',
-      membersCount: 1,
+      ownerId,
+      owner: ownerId ? this.getUserById(ownerId) : undefined,
+      membersCount: Math.max(1, Number(data.membersCount) || 1),
       isJoined: true,
       isPrivate: !!data.isPrivate,
       discoverability: data.discoverability || 'visible',
@@ -1361,7 +1365,7 @@ export class PersistentStorage {
         'No uncredited media or unauthorized commercial spam.',
       ],
       channels: data.channels || ['general', 'announcements'],
-      activeChannel: 'general',
+      activeChannel: data.activeChannel || 'general',
       createdAt: new Date(now).toISOString(),
     };
 
