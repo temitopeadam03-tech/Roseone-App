@@ -113,21 +113,20 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     }
   };
 
-  const handleCommentSubmit = (e?: React.FormEvent) => {
+  const handleCommentSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const clean = commentText.trim();
     if (!clean || isSubmittingComment) return;
 
     setIsSubmittingComment(true);
-    addComment(post.id, clean);
-    setCommentText('');
-
-    setTimeout(() => {
-      if (commentsContainerRef.current) {
-        commentsContainerRef.current.scrollTop = 0;
-      }
-      setIsSubmittingComment(false);
-    }, 200);
+    const saved = await addComment(post.id, clean);
+    if (saved) {
+      setCommentText('');
+      requestAnimationFrame(() => {
+        if (commentsContainerRef.current) commentsContainerRef.current.scrollTop = 0;
+      });
+    }
+    setIsSubmittingComment(false);
   };
 
   const handleVoiceCommentSubmit = (voiceUrl: string, duration: number) => {
@@ -135,18 +134,17 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     setShowVoiceRecorder(false);
   };
 
-  const handleReplySubmit = (commentId: string) => {
+  const handleReplySubmit = async (commentId: string) => {
     const clean = replyText.trim();
     if (!clean || isSubmittingReply) return;
 
     setIsSubmittingReply(true);
-    addComment(post.id, clean, commentId);
-    setReplyText('');
-    setReplyingToId(null);
-
-    setTimeout(() => {
-      setIsSubmittingReply(false);
-    }, 200);
+    const saved = await addComment(post.id, clean, commentId);
+    if (saved) {
+      setReplyText('');
+      setReplyingToId(null);
+    }
+    setIsSubmittingReply(false);
   };
 
   const handleReplyVoiceSubmit = (commentId: string, voiceUrl: string, duration: number) => {
