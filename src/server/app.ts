@@ -1368,8 +1368,21 @@ export function createExpressApp() {
 
   app.post('/api/communities/:id/join', (req: Request, res: Response) => {
     try {
-      const isJoined = storage.joinCommunity(req.params.id);
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const isJoined = storage.joinCommunity(req.params.id, authUser.id);
       res.json({ success: true, isJoined });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/communities/:id/leave', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const isJoined = storage.leaveCommunity(req.params.id, authUser.id);
+      res.json({ success: true, isJoined: !isJoined });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
     }
