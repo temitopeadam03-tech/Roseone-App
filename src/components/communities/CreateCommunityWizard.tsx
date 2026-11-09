@@ -283,7 +283,7 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
     setCurrentStep((prev) => Math.max(1, prev - 1));
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!validateStep(1) || !validateStep(currentStep)) return;
 
     const moderatorsList = allUsers.filter((u) => selectedModeratorIds.includes(u.id));
@@ -364,7 +364,12 @@ export const CreateCommunityWizard: React.FC<CreateCommunityWizardProps> = ({
       allowMemberInvites,
     };
 
-    const created = createCommunityDetailed(finalData);
+    let created: Community;
+    try {
+      created = await createCommunityDetailed(finalData);
+    } catch {
+      return;
+    }
     // Clear draft on creation
     try {
       localStorage.removeItem('rose_community_draft');
