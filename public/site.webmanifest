@@ -1,43 +1,30 @@
 {
-  "name": "Gistupp — Your World, Your People",
-  "short_name": "Gistupp",
-  "description": "Next-generation connected social platform featuring social feeds, stories, messaging, communities, video sharing, creator tools, AI assistance, and marketplace.",
+  "name": "GistUpp — Your World, Your People",
+  "short_name": "GistUpp",
+  "description": "A connected social platform for sharing, messaging, communities, video and marketplace discovery.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#120e14",
-  "theme_color": "#E91E8C",
+  "background_color": "#FFFFFF",
+  "theme_color": "#F20A83",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/favicon.svg",
       "sizes": "any",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/pwa-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/pwa-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/pwa-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/pwa-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "maskable"
     }
   ],
-  "categories": ["social", "entertainment", "productivity"]
+  "categories": [
+    "social",
+    "entertainment",
+    "productivity"
+  ]
 }
