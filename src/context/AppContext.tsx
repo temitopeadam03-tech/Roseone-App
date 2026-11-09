@@ -1625,39 +1625,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Deleted ${target?.name || 'community'}`, 'info');
   };
 
-  const joinCommunity = (communityId: string) => {
-    setCommunities((prev) =>
-      prev.map((c) =>
-        c.id === communityId
-          ? {
-              ...c,
-              isJoined: true,
-              membersCount: c.membersCount + 1,
-              memberList: [
-                ...(c.memberList || []),
-                { user: currentUser, role: 'member' as const, joinedDate: 'Just now' },
-              ],
-            }
-          : c
-      )
-    );
-    showToast('Joined space!', 'success');
+  const joinCommunity = async (communityId: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      await api.joinCommunity(communityId);
+      setCommunities((prev) => prev.map((community) => community.id === communityId
+        ? {
+            ...community,
+            isJoined: true,
+            membersCount: Math.max(1, community.membersCount + (community.memberList?.some((member) => member.user.id === currentUser.id) ? 0 : 1)),
+            memberList: [
+              ...(community.memberList || []).filter((member) => member.user.id !== currentUser.id),
+              { user: currentUser, role: 'member' as const, joinedDate: 'Just now' },
+            ],
+          }
+        : community));
+      showToast('Joined space and saved your membership.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not join this space.', 'error');
+    }
   };
 
-  const leaveCommunity = (communityId: string) => {
-    setCommunities((prev) =>
-      prev.map((c) =>
-        c.id === communityId
-          ? {
-              ...c,
-              isJoined: false,
-              membersCount: Math.max(0, c.membersCount - 1),
-              memberList: (c.memberList || []).filter((m) => m.user.id !== currentUser.id),
-            }
-          : c
-      )
-    );
-    showToast('Left space', 'info');
+  const leaveCommunity = async (communityId: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      await api.leaveCommunity(communityId);
+      setCommunities((prev) => prev.map((community) => community.id === communityId
+        ? {
+            ...community,
+            isJoined: false,
+            membersCount: Math.max(1, community.membersCount - (community.memberList?.some((member) => member.user.id === currentUser.id) ? 1 : 0)),
+            memberList: (community.memberList || []).filter((member) => member.user.id !== currentUser.id),
+          }
+        : community));
+      showToast('Left space and saved the change.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not leave this space.', 'error');
+    }
   };
 
   const switchCommunityChannel = (communityId: string, channelName: string) => {
