@@ -2380,6 +2380,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDataLoading, setIsDataLoading] = useState(false);
   // Ignore bootstrap responses that started before a successful user mutation.
   const dataMutationVersionRef = useRef(0);
+  const communitiesHydratedRef = useRef(false);
+  const persistedCommunitySnapshotsRef = useRef<Map<string, string>>(new Map());
 
   const refreshData = async () => {
     const requestVersion = dataMutationVersionRef.current;
@@ -2391,7 +2393,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.comments) setComments(data.comments);
         if (Array.isArray(data.stories)) setStories(data.stories);
         if (Array.isArray(data.conversations)) setConversations(data.conversations);
-        if (Array.isArray(data.communities)) setCommunities(data.communities);
+        if (Array.isArray(data.communities)) {
+          persistedCommunitySnapshotsRef.current = new Map(data.communities.map((community) => [community.id, JSON.stringify(community)]));
+          communitiesHydratedRef.current = true;
+          setCommunities(data.communities);
+        }
         if (Array.isArray(data.marketplaceListings)) setMarketplaceListings(data.marketplaceListings);
         if (Array.isArray(data.products)) setProducts(data.products);
         if (Array.isArray(data.notifications)) setNotifications(data.notifications);
@@ -2452,6 +2458,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   useEffect(() => {
+    if (!isAuthenticated || !communitiesHydratedRef.current) return;
+    const snapshots = persistedCommunitySnapshotsRef.current;
+    const owned = communities.filter((community) => community.ownerId === currentUser.id);
+    const pendingWrites = owned.filter((community) => snapshots.get(community.id) !== JSON.stringify(community));
+    const pendingDeletes = Array.from(snapshots.keys()).filter((id) =>
+      !communities.some((community) => community.id === id)
+    );
+    for (const community of pendingWrites) {
+      const snapshot = JSON.stringify(community);
+      snapshots.set(community.id, snapshot);
+      void api.updateCommunity(community.id, community).catch((error) => {
+        snapshots.delete(community.id);
+        console.error('Community change could not be saved:', error);
+        showToast(error instanceof Error ? error.message : 'Community changes could not be saved.', 'error');
+      });
+    }
+    for (const id of pendingDeletes) {
+      snapshots.delete(id);
+      void api.deleteCommunity(id).catch((error) => {
+        console.error('Community deletion could not be saved:', error);
+        showToast(error instanceof Error ? error.message : 'Community could not be deleted.', 'error');
+      });
+    }
+  }, [communities, currentUser.id, isAuthenticated]);
+
+  useEffect(() => {
+    communitiesHydratedRef.current = false;
     void refreshData();
     const syncTimer = window.setInterval(() => { void refreshData(); }, 15000);
     const onFocus = () => { void refreshData(); };
