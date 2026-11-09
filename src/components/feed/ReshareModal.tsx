@@ -59,11 +59,25 @@ export const ReshareModal: React.FC = () => {
     showToast('Post shared to your Rose Story for 24 hours!', 'success');
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     const postUrl = `${window.location.origin}/post/${originalPost.id}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(postUrl);
-      showToast('Post link copied to clipboard!', 'success');
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(postUrl);
+      } else {
+        const field = document.createElement('textarea');
+        field.value = postUrl;
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (!copied) throw new Error('Clipboard unavailable');
+      }
+      showToast('Link Copied', 'success');
+    } catch {
+      showToast('Could not copy the link. Check browser permissions.', 'error');
     }
   };
 
