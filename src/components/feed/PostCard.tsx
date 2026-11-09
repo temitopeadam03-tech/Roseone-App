@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   Heart,
+  Copy,
   MessageCircle,
   Repeat2,
   Bookmark,
@@ -60,6 +61,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageAspectRatios, setImageAspectRatios] = useState<Record<number, '4 / 5' | '16 / 9' | '1 / 1'>>({});
 
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
@@ -70,11 +72,44 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const isMyPost = post.author?.id === currentUser?.id;
   const isFollowing = currentUser?.following?.includes(post.author?.id);
 
-  const handleShare = () => {
-    const postUrl = `${window.location.origin}/post/${post.id}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(postUrl);
-      showToast('Post link copied to clipboard!', 'success');
+  const getPostUrl = () => `${window.location.origin}/post/${post.id}`;
+
+  const handleShare = async () => {
+    const url = getPostUrl();
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: 'GistUpp post', url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        showToast('Link Copied', 'success');
+      } else {
+        showToast('Sharing is not supported in this browser.', 'error');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      showToast('Could not open the share sheet. Please try Copy Link.', 'error');
+    }
+  };
+
+  const handleCopyLink = async () => {
+    const url = getPostUrl();
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const field = document.createElement('textarea');
+        field.value = url;
+        field.style.position = 'fixed';
+        field.style.opacity = '0';
+        document.body.appendChild(field);
+        field.select();
+        const copied = document.execCommand('copy');
+        field.remove();
+        if (!copied) throw new Error('Clipboard permission denied');
+      }
+      showToast('Link Copied', 'success');
+    } catch {
+      showToast('Could not copy the link. Please check browser permissions.', 'error');
     }
   };
 
@@ -290,7 +325,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                 <img
                   src={post.resharedPost.media[0]}
                   alt="Embedded media"
-                  className="w-full h-48 object-contain bg-slate-100 dark:bg-slate-900"
+                  className="w-full aspect-video object-cover bg-transparent"
                 />
               </div>
             )}
@@ -350,21 +385,23 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {/* Media Gallery */}
       {post.media && post.media.length > 0 && (
-        <div className="px-3.5 sm:px-4 pb-3">
-          <div
-            className={`grid gap-1.5 rounded-2xl overflow-hidden ${
-              post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'
-            }`}
-          >
+        <div className="w-full pb-3">
+          <div className={`grid w-full gap-1 overflow-hidden ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {post.media.map((imgUrl, i) => (
               <img
                 key={i}
                 src={imgUrl}
                 alt={`Media ${i + 1}`}
                 onClick={() => setSelectedImage(imgUrl)}
-                className={`w-full object-contain bg-slate-100 dark:bg-slate-900 cursor-pointer hover:opacity-95 transition-opacity ${
-                  post.media && post.media.length === 1 ? 'max-h-[520px]' : 'h-48'
-                }`}
+                onLoad={(event) => {
+                  if (post.media?.length !== 1) return;
+                  const image = event.currentTarget;
+                  const ratio = image.naturalHeight / Math.max(1, image.naturalWidth);
+                  const nextRatio = ratio > 1.08 ? '4 / 5' : ratio < 0.92 ? '16 / 9' : '1 / 1';
+                  setImageAspectRatios((prev) => prev[i] === nextRatio ? prev : { ...prev, [i]: nextRatio });
+                }}
+                style={post.media.length === 1 ? { aspectRatio: imageAspectRatios[i] || '1 / 1' } : undefined}
+                className={`block w-full object-cover bg-transparent cursor-pointer hover:opacity-95 transition-opacity ${post.media.length === 1 ? 'max-h-[720px]' : 'aspect-square'}`}
               />
             ))}
           </div>
@@ -504,9 +541,18 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
         {/* Share Link Trigger */}
         <button
-          onClick={handleShare}
+          onClick={() => void handleCopyLink()}
           className="min-h-[40px] flex items-center gap-1 text-xs font-semibold hover:text-slate-800 dark:hover:text-slate-200"
           title="Copy link"
+          aria-label="Copy post link"
+        >
+          <Copy className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => void handleShare()}
+          className="min-h-[40px] flex items-center gap-1 text-xs font-semibold hover:text-slate-800 dark:hover:text-slate-200"
+          title="Share post"
+          aria-label="Share post"
         >
           <Share2 className="w-4 h-4" />
         </button>
