@@ -121,15 +121,15 @@ interface AppContextType {
   conversations: Conversation[];
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
-  sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number) => void;
-  startNewConversation: (recipientName: string, recipientHandle: string, initialMessage?: string) => void;
+  sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number) => Promise<void>;
+  startNewConversation: (recipientName: string, recipientHandle: string, initialMessage?: string) => Promise<void>;
   togglePinMessage: (conversationId: string, messageId: string) => void;
   reactToMessage: (conversationId: string, messageId: string, emoji: string) => void;
 
   // Communities & Groups
   communities: Community[];
   createCommunity: (name: string, description: string, isPrivate: boolean) => void;
-  createCommunityDetailed: (data: Partial<Community> & { name: string; description: string }) => Community;
+  createCommunityDetailed: (data: Partial<Community> & { name: string; description: string }) => Promise<Community>;
   updateCommunity: (communityId: string, updates: Partial<Community>) => void;
   deleteCommunity: (communityId: string) => void;
   joinCommunity: (communityId: string) => void;
@@ -1378,92 +1378,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [conversations]);
 
-  const startNewConversation = (recipientName: string, recipientHandle: string, initialMessage?: string) => {
-    const cleanHandle = recipientHandle.replace(/^@/, '').trim();
+  const startNewConversation = async (recipientName: string, recipientHandle: string, initialMessage?: string) => {
+    const cleanHandle = recipientHandle.replace(/^@/, '').trim().toLowerCase();
     const existing = conversations.find(
-      (c) => !c.isGroup && c.participants.some((p) => p.handle === cleanHandle)
+      (c) => !c.isGroup && c.participants.some((p) => p.handle.toLowerCase() === cleanHandle)
     );
 
     if (existing) {
       setActiveConversationId(existing.id);
       setActiveView('feed');
       setActiveTab('messages');
-      if (initialMessage) {
-        sendMessage(existing.id, initialMessage);
-      }
+      if (initialMessage) await sendMessage(existing.id, initialMessage);
       return;
     }
 
-    const recipientUser: User = allUsers.find((u) => u.handle === cleanHandle) || {
-      id: `user_${cleanHandle}`,
-      name: recipientName.trim() || cleanHandle,
-      handle: cleanHandle,
-      avatar: '',
-      banner: '',
-      bio: '',
-      joinedDate: 'Gistupp member',
-      verified: false,
-      followersCount: 0,
-      followingCount: 0,
-      postsCount: 0,
-    };
+    const recipientUser = allUsers.find((u) => u.handle.toLowerCase() === cleanHandle);
+    if (!recipientUser) {
+      showToast('That account could not be found. Ask the person to sign in once, then try again.', 'error');
+      return;
+    }
 
-    const newConv: Conversation = {
-      id: `conv_${Date.now()}`,
-      title: recipientUser.name,
-      isGroup: false,
-      avatar: recipientUser.avatar,
-      participants: [currentUser, recipientUser],
-      messages: initialMessage
-        ? [
-            {
-              id: `msg_${Date.now()}`,
-              senderId: currentUser.id,
-              text: initialMessage,
-              createdAt: 'Just now',
-              isRead: true,
-            },
-          ]
-        : [],
-      unreadCount: 0,
-      lastMessageTime: 'Just now',
-    };
-
-    setConversations((prev) => [newConv, ...prev]);
-    setActiveConversationId(newConv.id);
-    setActiveView('feed');
-    setActiveTab('messages');
-    showToast(`Conversation opened with @${cleanHandle}`, 'success');
+    try {
+      const savedConversation = await api.createConversation(currentUser.id, recipientUser.id, initialMessage);
+      setConversations((prev) => [savedConversation, ...prev.filter((item) => item.id !== savedConversation.id)]);
+      setActiveConversationId(savedConversation.id);
+      setActiveView('feed');
+      setActiveTab('messages');
+      showToast(`Conversation opened with @${cleanHandle}`, 'success');
+    } catch (error) {
+      console.error('Conversation creation failed:', error);
+      showToast(error instanceof Error ? error.message : 'Conversation could not be saved. Please retry.', 'error');
+    }
   };
 
-  const sendMessage = (
+  const sendMessage = async (
     conversationId: string,
     text: string,
     mediaUrl?: string,
     audioDuration?: number
-  ) => {
-    const newMsg: Message = {
-      id: `msg_${Date.now()}`,
-      senderId: currentUser.id,
-      text,
-      mediaUrl,
-      audioDuration,
-      createdAt: 'Just now',
-      isRead: true,
-    };
-
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id === conversationId) {
-          return {
-            ...c,
-            lastMessageTime: 'Just now',
-            messages: [...c.messages, newMsg],
-          };
-        }
-        return c;
-      })
-    );
+  ): Promise<void> => {
+    try {
+      const savedMessage = await api.sendMessage(conversationId, currentUser.id, text, mediaUrl, audioDuration);
+      setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
+        ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now', messages: [...conversation.messages, savedMessage] }
+        : conversation));
+    } catch (error) {
+      console.error('Message save failed:', error);
+      showToast(error instanceof Error ? error.message : 'Message could not be saved. Please retry.', 'error');
+    }
   };
 
   const togglePinMessage = (conversationId: string, messageId: string) => {
@@ -1547,7 +1509,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const createCommunityDetailed = (data: Partial<Community> & { name: string; description: string }): Community => {
+  const createCommunityDetailed = async (data: Partial<Community> & { name: string; description: string }): Promise<Community> => {
     const slug = data.slug || data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const newComm: Community = {
       id: `comm_${Date.now()}`,
@@ -1633,13 +1595,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       createdAt: 'Just now',
     };
 
-    setCommunities((prev) => [newComm, ...prev]);
-    setActiveCommunityId(newComm.id);
-    setActiveView('communities');
-    setCommunityDashboardTab('feed');
-    setIsCreateCommunityOpen(false);
-    showToast(`Created ${data.type === 'group' ? 'Group' : 'Community'} "${newComm.name}"!`, 'success');
-    return newComm;
+    try {
+      const savedCommunity = await api.createCommunity({ ...newComm, ownerId: currentUser.id });
+      setCommunities((prev) => [savedCommunity, ...prev.filter((community) => community.id !== savedCommunity.id)]);
+      setActiveCommunityId(savedCommunity.id);
+      setActiveView('communities');
+      setCommunityDashboardTab('feed');
+      setIsCreateCommunityOpen(false);
+      showToast(`Created ${data.type === 'group' ? 'Group' : 'Community'} "${savedCommunity.name}" and saved it to GistUpp!`, 'success');
+      return savedCommunity;
+    } catch (error) {
+      console.error('Community creation failed:', error);
+      showToast(error instanceof Error ? error.message : 'Community could not be saved. Please retry.', 'error');
+      throw error;
+    }
   };
 
   const updateCommunity = (communityId: string, updates: Partial<Community>) => {
