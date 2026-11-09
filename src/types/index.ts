@@ -157,6 +157,7 @@ export interface Message {
   senderId: string;
   text: string;
   mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'file';
   audioDuration?: number; // seconds if voice note
   createdAt: string;
   isRead: boolean;
