@@ -972,6 +972,20 @@ export function createExpressApp() {
     }
   });
 
+  app.put('/api/conversations/:id/disappearing', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const conversation = storage.getConversations(authUser.id).find((item) => item.id === req.params.id);
+      if (!conversation) return res.status(404).json({ success: false, error: 'Conversation not found.' });
+      const seconds = Number(req.body?.seconds);
+      const updated = storage.setDisappearingMessages(req.params.id, authUser.id, seconds);
+      res.json({ success: true, conversation: updated });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not update disappearing-message timer.' });
+    }
+  });
+
   app.post('/api/conversations/:id/read', (req: Request, res: Response) => {
     try {
       const { id } = req.params;
