@@ -796,15 +796,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [reshareModalPost, setReshareModalPost] = useState<Post | null>(null);
 
   const reactToPost = async (postId: string, reaction: ReactionType) => {
+    const previous = posts.find((post) => post.id === postId);
+    if (!previous) return;
+    const oldReaction = previous.userReaction || previous.reactions?.[currentUser.id];
+    const removing = oldReaction === reaction;
+    const optimistic: Post = {
+      ...previous,
+      isLiked: !removing,
+      userReaction: removing ? undefined : reaction,
+      likesCount: Math.max(0, (previous.likesCount || 0) + (removing ? -1 : oldReaction ? 0 : 1)),
+    };
+    setPosts((prev) => prev.map((post) => post.id === postId ? optimistic : post));
     try {
       dataMutationVersionRef.current += 1;
       const savedPost = await api.reactToPost(postId, reaction);
       setPosts((prev) => prev.map((post) => post.id === postId ? savedPost : post));
-      const reactionEmojis: Record<ReactionType, string> = {
-        like: '👍', love: '❤️', fire: '🔥', rose: '🌹', clap: '👏', insight: '💡',
-      };
-      showToast(`Reacted ${reactionEmojis[reaction]}!`, 'success');
     } catch (error) {
+      setPosts((prev) => prev.map((post) => post.id === postId ? previous : post));
       console.error('Post reaction could not be saved:', error);
       showToast(error instanceof Error ? error.message : 'Reaction could not be saved. Please retry.', 'error');
     }
@@ -823,93 +831,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const toggleSavePost = (postId: string) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === postId) {
-          const isSaved = !p.isSaved;
-          showToast(isSaved ? 'Saved to collections' : 'Removed from collections', 'info');
-          return { ...p, isSaved };
-        }
-        return p;
-      })
-    );
-  };
-
-  const toggleRepostPost = (postId: string) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === postId) {
-          const isReposted = !p.isReposted;
-          showToast(isReposted ? 'Reposted to your followers' : 'Repost undone', 'info');
-
-          if (isReposted && p.author.id !== currentUser.id) {
-            addNotification({
-              type: 'reaction',
-              actor: currentUser,
-              title: `${currentUser.name} reposted your post`,
-              previewText: p.content.slice(0, 60),
-              targetType: 'post',
-              targetId: p.id,
-            });
-          }
-
-          return {
-            ...p,
-            isReposted,
-            repostsCount: isReposted ? p.repostsCount + 1 : Math.max(0, p.repostsCount - 1),
-          };
-        }
-        return p;
-      })
-    );
-  };
-
-  const resharePostWithQuote = (originalPostId: string, quoteCaption?: string) => {
-    const orig = posts.find((p) => p.id === originalPostId);
-    if (!orig) return;
-
-    // Increment original post's repostsCount and mark reposted
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === originalPostId
-          ? { ...p, repostsCount: p.repostsCount + 1, isReposted: true }
-          : p
-      )
-    );
-
-    const newPost: Post = {
-      id: `post_${Date.now()}`,
-      author: currentUser,
-      content: quoteCaption || '',
-      resharedPost: orig,
-      createdAt: 'Just now',
-      createdTimestamp: Date.now(),
-      likesCount: 0,
-      commentsCount: 0,
-      repostsCount: 0,
-      viewsCount: 1,
-      isLiked: false,
-      isSaved: false,
-      isReposted: false,
-      tags: orig.tags || [],
-    };
-
-    setPosts((prev) => [newPost, ...prev]);
-    updateCurrentUser({ postsCount: currentUser.postsCount + 1 });
-
-    if (orig.author.id !== currentUser.id) {
-      addNotification({
-        type: 'reaction',
-        actor: currentUser,
-        title: `${currentUser.name} reshared your post`,
-        previewText: quoteCaption ? quoteCaption.slice(0, 60) : orig.content.slice(0, 60),
-        targetType: 'post',
-        targetId: orig.id,
-      });
+  const toggleSavePost = async (postId: string) => {
+    const previous = posts.find((post) => post.id === postId);
+    if (!previous) return;
+    const optimisticSaved = !previous.isSaved;
+    setPosts((prev) => prev.map((post) => post.id === postId ? { ...post, isSaved: optimisticSaved } : post));
+    try {
+      dataMutationVersionRef.current += 1;
+      const saved = await api.toggleSavePost(postId);
+      setPosts((prev) => prev.map((post) => post.id === postId ? { ...post, isSaved: saved } : post));
+      showToast(saved ? 'Saved to collections' : 'Removed from collections', 'success');
+    } catch (error) {
+      setPosts((prev) => prev.map((post) => post.id === postId ? previous : post));
+      showToast(error instanceof Error ? error.message : 'Save could not be stored. Please retry.', 'error');
     }
+  };
 
-    showToast('Post reshared to your followers!', 'success');
+  const toggleRepostPost = async (postId: string) => {
+    const previous = posts.find((post) => post.id === postId);
+    if (!previous) return;
+    const nextReposted = !previous.isReposted;
+    setPosts((prev) => prev.map((post) => post.id === postId ? {
+      ...post, isReposted: nextReposted,
+      repostsCount: Math.max(0, (post.repostsCount || 0) + (nextReposted ? 1 : -1)),
+    } : post));
+    try {
+      dataMutationVersionRef.current += 1;
+      const savedPost = await api.toggleRepostPost(postId);
+      setPosts((prev) => prev.map((post) => post.id === postId ? savedPost : post));
+      showToast(nextReposted ? 'Reposted to your followers' : 'Repost undone', 'success');
+    } catch (error) {
+      setPosts((prev) => prev.map((post) => post.id === postId ? previous : post));
+      showToast(error instanceof Error ? error.message : 'Repost could not be saved. Please retry.', 'error');
+    }
+  };
+
+  const resharePostWithQuote = async (originalPostId: string, quoteCaption?: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      const newPost = await api.createQuoteReshare(originalPostId, quoteCaption || '');
+      setPosts((prev) => [newPost, ...prev.map((post) => post.id === originalPostId
+        ? { ...post, repostsCount: newPost.resharedPost?.repostsCount ?? post.repostsCount + 1, isReposted: true }
+        : post)]);
+      updateCurrentUser({ postsCount: currentUser.postsCount + 1 });
+      showToast('Post reshared to your followers!', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Reshare could not be saved. Please retry.', 'error');
+    }
   };
 
   const votePoll = (postId: string, optionId: string) => {
@@ -1370,16 +1338,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     mediaUrl?: string,
     audioDuration?: number,
     mediaType?: 'image' | 'video' | 'file'
-  ): Promise<void> => {
+  ): Promise<boolean> => {
+    const cleanText = text.trim();
+    if (!cleanText && !mediaUrl && !audioDuration) return false;
+    const tempId = `pending_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const timestamp = Date.now();
+    const optimisticMessage: Message = {
+      id: tempId, chatId: conversationId, senderId: currentUser.id,
+      text: cleanText, mediaUrl, mediaType, audioDuration,
+      timestamp, createdTimestamp: timestamp, createdAt: new Date(timestamp).toISOString(), isRead: false,
+    };
+    setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
+      ? { ...conversation, lastMessageTime: optimisticMessage.createdAt, messages: [...conversation.messages, optimisticMessage] }
+      : conversation));
     try {
       dataMutationVersionRef.current += 1;
-      const savedMessage = await api.sendMessage(conversationId, currentUser.id, text, mediaUrl, audioDuration, mediaType);
+      const savedMessage = await api.sendMessage(conversationId, currentUser.id, cleanText, mediaUrl, audioDuration, mediaType);
       setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
-        ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now', messages: [...conversation.messages, savedMessage] }
+        ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now',
+            messages: [...conversation.messages.filter((message) => message.id !== tempId && message.id !== savedMessage.id), savedMessage]
+              .sort((a, b) => (a.timestamp || a.createdTimestamp || 0) - (b.timestamp || b.createdTimestamp || 0)) }
         : conversation));
+      return true;
     } catch (error) {
+      setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
+        ? { ...conversation, messages: conversation.messages.filter((message) => message.id !== tempId) }
+        : conversation));
       console.error('Message save failed:', error);
       showToast(error instanceof Error ? error.message : 'Message could not be saved. Please retry.', 'error');
+      return false;
     }
   };
 
