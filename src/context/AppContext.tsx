@@ -909,7 +909,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Post deleted', 'info');
   };
 
-  const addComment = async (postId: string, content: string, replyToCommentId?: string) => {
+  const addComment = async (postId: string, content: string, replyToCommentId?: string): Promise<boolean> => {
     try {
       dataMutationVersionRef.current += 1;
       const savedComment = await api.addComment(postId, currentUser.id, content, undefined, undefined, replyToCommentId);
@@ -940,9 +940,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
       }
       showToast('Comment posted', 'success');
+      return true;
     } catch (error) {
       console.error('Comment save failed:', error);
       showToast(error instanceof Error ? error.message : 'Comment could not be saved. Please retry.', 'error');
+      return false;
     }
   };
 
