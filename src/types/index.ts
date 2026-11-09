@@ -154,7 +154,11 @@ export interface Story {
 
 export interface Message {
   id: string;
+  chatId?: string;
   senderId: string;
+  receiverId?: string;
+  timestamp?: number;
+  createdTimestamp?: number;
   text: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video' | 'file';
