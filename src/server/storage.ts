@@ -769,6 +769,14 @@ export class PersistentStorage {
     return !isSaved;
   }
 
+  public recordPostShare(postId: string): Post {
+    const post = this.db.posts.find((item) => item.id === postId);
+    if (!post) throw new Error('Post not found');
+    post.sharesCount = (post.sharesCount || 0) + 1;
+    this.schedulePersist();
+    return post;
+  }
+
   public toggleRepostPost(postId: string, userId: string): Post {
     const post = this.db.posts.find((item) => item.id === postId);
     if (!post) throw new Error('Post not found');
