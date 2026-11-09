@@ -31,6 +31,7 @@ export const MessagesView: React.FC = () => {
     activeConversationId,
     setActiveConversationId,
     sendMessage,
+    setDisappearingMessages,
     startNewConversation,
     togglePinMessage,
     reactToMessage,
@@ -291,6 +292,20 @@ export const MessagesView: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-1">
+              <label className="sr-only" htmlFor="disappearing-message-timer">Disappearing messages</label>
+              <select
+                id="disappearing-message-timer"
+                aria-label="Disappearing messages timer"
+                value={activeConversation.disappearingMessagesSeconds || 0}
+                onChange={(event) => void setDisappearingMessages(activeConversation.id, Number(event.target.value))}
+                className="max-w-[112px] h-9 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-[#211a25] px-2 text-[11px] font-semibold text-slate-600 dark:text-slate-200"
+                title="Disappearing messages"
+              >
+                <option value={0}>Expiry: Off</option>
+                <option value={86400}>24 hours</option>
+                <option value={604800}>7 days</option>
+                <option value={7776000}>90 days</option>
+              </select>
               <button
                 onClick={() =>
                   showToast('Voice call feature scheduled for next release', 'info')
@@ -418,6 +433,7 @@ export const MessagesView: React.FC = () => {
                           }`}
                         >
                           <span>{msg.createdAt}</span>
+                          {msg.expiresAt && <span className="font-semibold">• Temporary</span>}
                           {isMine && <CheckCheck className="w-3.5 h-3.5 text-white/90" />}
                         </div>
 
