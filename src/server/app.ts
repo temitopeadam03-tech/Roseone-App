@@ -1018,6 +1018,62 @@ export function createExpressApp() {
     }
   });
 
+  // --- Standalone Channels ---
+  app.get('/api/channels', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      res.json({ success: true, channels: storage.getChannels(authUser.id) });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post('/api/channels', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const channel = storage.createChannel(authUser.id, req.body || {});
+      res.status(201).json({ success: true, channel });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not create channel.' });
+    }
+  });
+
+  app.post('/api/channels/:id/subscribe', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const channel = storage.toggleChannelSubscription(req.params.id, authUser.id);
+      res.json({ success: true, channel });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not update subscription.' });
+    }
+  });
+
+  app.post('/api/channels/:id/posts', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const { content, mediaUrl, mediaType } = req.body || {};
+      const channel = storage.createChannelPost(req.params.id, authUser.id, String(content || ''), mediaUrl, mediaType);
+      res.status(201).json({ success: true, channel });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not publish channel post.' });
+    }
+  });
+
+  app.delete('/api/channels/:id', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      storage.deleteChannel(req.params.id, authUser.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not delete channel.' });
+    }
+  });
+
   // --- Users & Profiles ---
   app.get('/api/users', (_req: Request, res: Response) => {
     try {
