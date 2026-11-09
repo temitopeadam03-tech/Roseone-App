@@ -1316,6 +1316,28 @@ export function createExpressApp() {
     }
   });
 
+  app.put('/api/communities/:id', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const community = storage.updateCommunity(req.params.id, authUser.id, req.body?.updates || {});
+      res.json({ success: true, community });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Community could not be updated.' });
+    }
+  });
+
+  app.delete('/api/communities/:id', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const success = storage.deleteCommunity(req.params.id, authUser.id);
+      res.json({ success });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Community could not be deleted.' });
+    }
+  });
+
   app.post('/api/communities/:id/join', (req: Request, res: Response) => {
     try {
       const isJoined = storage.joinCommunity(req.params.id);
