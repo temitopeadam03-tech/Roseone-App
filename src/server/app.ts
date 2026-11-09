@@ -1207,20 +1207,39 @@ export function createExpressApp() {
     }
   });
 
-  app.put('/api/marketplace/:id', (req: Request, res: Response) => {
+  app.put('/api/marketplace/:id', async (req: Request, res: Response) => {
     try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
       const { id } = req.params;
       const { updates } = req.body;
-      const listing = storage.updateListing(id, updates);
+      const existing = storage.getBootstrapData(authUser.id).marketplaceListings.find((item: any) => item.id === id);
+      if (!existing || existing.seller?.id !== authUser.id) return res.status(404).json({ success: false, error: 'Listing not found or you do not own it.' });
+      const listing = storage.updateListing(id, updates || {});
+      if (liveDb) {
+        const { error } = await liveDb.from('gistupp_shared_content').upsert({
+          content_type: 'marketplace_listing', content_id: listing.id, owner_id: authUser.id, payload: listing, expires_at: null,
+        }, { onConflict: 'content_type,content_id' });
+        if (error) throw error;
+      }
       res.json({ success: true, listing });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
     }
   });
 
-  app.delete('/api/marketplace/:id', (req: Request, res: Response) => {
+  app.delete('/api/marketplace/:id', async (req: Request, res: Response) => {
     try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const existing = storage.getBootstrapData(authUser.id).marketplaceListings.find((item: any) => item.id === req.params.id);
+      if (!existing || existing.seller?.id !== authUser.id) return res.status(404).json({ success: false, error: 'Listing not found or you do not own it.' });
       const success = storage.deleteListing(req.params.id);
+      if (liveDb) {
+        const { error } = await liveDb.from('gistupp_shared_content')
+          .delete().eq('content_type', 'marketplace_listing').eq('content_id', req.params.id).eq('owner_id', authUser.id);
+        if (error) throw error;
+      }
       res.json({ success });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
@@ -1271,12 +1290,13 @@ export function createExpressApp() {
     try {
       const authUser = getAuthUser(req);
       if (!authUser) { res.status(401).json({ success: false, error: 'Authentication required' }); return; }
-      const { data } = req.body;
-      data.createdBy = authUser.id;
+      const { data } = req.body || {};
       if (!data || !data.name || !data.description) {
         res.status(400).json({ success: false, error: 'name and description required' });
         return;
       }
+      data.createdBy = authUser.id;
+      data.ownerId = authUser.id;
       const community = storage.createCommunity(data);
       res.status(201).json({ success: true, community });
     } catch (err: any) {
