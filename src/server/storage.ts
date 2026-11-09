@@ -1026,7 +1026,8 @@ export class PersistentStorage {
     text: string,
     voiceUrlOrMedia?: string,
     audioDuration?: number,
-    mediaUrl?: string
+    mediaUrl?: string,
+    mediaType?: 'image' | 'video' | 'file'
   ): Message {
     let conversation = this.db.conversations.find((c) => c.id === conversationId);
     const sender = this.getUserById(senderId);
@@ -1039,6 +1040,7 @@ export class PersistentStorage {
       senderId,
       text: text || '',
       mediaUrl: effectiveMediaUrl,
+      mediaType,
       audioDuration,
       createdAt: 'Just now',
       isRead: false,
