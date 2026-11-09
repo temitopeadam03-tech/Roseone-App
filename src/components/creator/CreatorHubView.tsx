@@ -23,13 +23,13 @@ export const CreatorHubView: React.FC = () => {
   const [prodCategory, setProdCategory] = useState('Digital Asset');
   const [prodDesc, setProdDesc] = useState('');
 
-  const handleCreateProduct = (e: React.FormEvent) => {
+  const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodTitle.trim() || !prodDesc.trim()) {
       showToast('Please fill all product fields', 'error');
       return;
     }
-    addProduct({
+    await addProduct({
       title: prodTitle.trim(),
       description: prodDesc.trim(),
       price: Number(prodPrice),
