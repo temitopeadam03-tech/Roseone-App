@@ -8,6 +8,7 @@ import {
   Conversation,
   Message,
   Community,
+  Channel,
   CommunityRule,
   CommunityAnnouncement,
   CommunityEvent,
@@ -129,6 +130,11 @@ interface AppContextType {
   reactToMessage: (conversationId: string, messageId: string, emoji: string) => void;
 
   // Communities & Groups
+  channels: Channel[];
+  createChannel: (data: { name: string; description: string; isPrivate?: boolean }) => Promise<void>;
+  toggleChannelSubscription: (channelId: string) => Promise<void>;
+  createChannelPost: (channelId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video') => Promise<void>;
+  deleteChannel: (channelId: string) => Promise<void>;
   communities: Community[];
   createCommunity: (name: string, description: string, isPrivate: boolean) => Promise<void>;
   createCommunityDetailed: (data: Partial<Community> & { name: string; description: string }) => Promise<Community>;
@@ -1493,6 +1499,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Communities: Genuine communities
+  const [channels, setChannels] = useState<Channel[]>([]);
+
   const [communities, setCommunities] = useState<Community[]>(() => {
     try {
       const saved = localStorage.getItem('rose_communities');
@@ -1511,6 +1519,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return INITIAL_COMMUNITIES;
     }
   });
+
+  const createChannel = async (data: { name: string; description: string; isPrivate?: boolean }): Promise<void> => {
+    try {
+      const channel = await api.createChannel(data);
+      setChannels((prev) => [channel, ...prev.filter((item) => item.id !== channel.id)]);
+      showToast('Channel created and saved.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not create channel.', 'error');
+    }
+  };
+
+  const toggleChannelSubscription = async (channelId: string): Promise<void> => {
+    try {
+      const updated = await api.toggleChannelSubscription(channelId);
+      setChannels((prev) => prev.map((item) => item.id === channelId ? updated : item));
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not update channel subscription.', 'error');
+    }
+  };
+
+  const createChannelPost = async (channelId: string, content: string, mediaUrl?: string, mediaType?: 'image' | 'video'): Promise<void> => {
+    try {
+      const updated = await api.createChannelPost(channelId, content, mediaUrl, mediaType);
+      setChannels((prev) => prev.map((item) => item.id === channelId ? updated : item));
+      showToast('Channel post published.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not publish channel post.', 'error');
+    }
+  };
+
+  const deleteChannel = async (channelId: string): Promise<void> => {
+    try {
+      await api.deleteChannel(channelId);
+      setChannels((prev) => prev.filter((item) => item.id !== channelId));
+      showToast('Channel deleted.', 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not delete channel.', 'error');
+    }
+  };
 
   const [isCreateCommunityOpen, setIsCreateCommunityOpen] = useState(false);
   const [createCommunityInitialType, setCreateCommunityInitialType] = useState<'community' | 'group'>('community');
@@ -2418,6 +2465,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (data.comments) setComments(data.comments);
         if (Array.isArray(data.stories)) setStories(data.stories);
         if (Array.isArray(data.conversations)) setConversations(data.conversations);
+        if (Array.isArray(data.channels)) setChannels(data.channels);
         if (Array.isArray(data.communities)) {
           persistedCommunitySnapshotsRef.current = new Map(data.communities.map((community) => [community.id, JSON.stringify(community)]));
           communitiesHydratedRef.current = true;
@@ -2619,6 +2667,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createGroupConversation,
         togglePinMessage,
         reactToMessage,
+        channels,
+        createChannel,
+        toggleChannelSubscription,
+        createChannelPost,
+        deleteChannel,
         communities,
         createCommunity,
         createCommunityDetailed,
