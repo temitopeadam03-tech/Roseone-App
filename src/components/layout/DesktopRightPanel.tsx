@@ -26,7 +26,7 @@ export const DesktopRightPanel: React.FC = () => {
     .slice(0, 5);
 
   return (
-    <aside className="w-72 xl:w-80 sticky top-14 h-[calc(100vh-3.5rem)] py-4 pl-2 space-y-4 shrink-0 overflow-y-auto no-scrollbar select-none">
+    <aside className="w-72 xl:w-80 sticky top-14 h-[calc(100vh-3.5rem)] py-2 pl-1 space-y-2 shrink-0 overflow-y-auto no-scrollbar select-none">
       {/* Search trigger */}
       <div
         onClick={() => {
@@ -40,8 +40,8 @@ export const DesktopRightPanel: React.FC = () => {
       </div>
 
       {/* Trending Box - Genuine Real Data */}
-      <div className="p-4 bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
-        <div className="flex items-center gap-2 mb-3">
+      <div className="p-3 bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2 mb-2">
           <TrendingUp className="w-4 h-4 text-[#E91E8C]" />
           <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
             Trending on Gistupp
@@ -67,7 +67,7 @@ export const DesktopRightPanel: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {trendingTags.map(([tag, count]) => (
               <div
                 key={tag}
@@ -120,7 +120,7 @@ export const DesktopRightPanel: React.FC = () => {
         </div>
 
         {communities.length === 0 ? (
-          <div className="py-3 text-center">
+          <div className="py-2 text-center">
             <p className="text-xs text-slate-500 font-medium">No communities joined yet</p>
             <button
               onClick={() => openCreateCommunity('community')}
