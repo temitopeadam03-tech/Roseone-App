@@ -117,7 +117,7 @@ export const FeedView: React.FC = () => {
 
   return (
     <div
-      className="w-full min-w-0 space-y-4 sm:space-y-5 pb-8"
+      className="w-full min-w-0 space-y-2 pb-4"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -161,8 +161,8 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* Stories Rail */}
-      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-4 sm:p-5 shadow-xs">
-        <div className="flex items-center gap-3.5 sm:gap-4 overflow-x-auto no-scrollbar py-1 px-1">
+      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3 shadow-xs">
+        <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1 px-1">
           {/* Current User Story Circle / Add Trigger */}
           {(() => {
             const myStoryIdx = stories.findIndex((s) => s.userId === currentUser.id);
@@ -278,7 +278,7 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* Quick Composer Box */}
-      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3.5 shadow-xs">
+      <div className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 p-3 shadow-xs">
         <div className="flex items-center gap-3">
           <Avatar src={currentUser.avatar} name={currentUser.name} size="sm" />
           <button
@@ -289,7 +289,7 @@ export const FeedView: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center justify-between pt-2.5 mt-2.5 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => setCreatePostModalOpen(true)}
@@ -358,9 +358,9 @@ export const FeedView: React.FC = () => {
       </div>
 
       {/* Feed Posts */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredPosts.length === 0 ? (
-          <div className="p-10 text-center bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+          <div className="p-6 text-center bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
             <Layers className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">
               No posts yet
