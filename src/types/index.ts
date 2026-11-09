@@ -291,6 +291,33 @@ export interface Community {
   createdAt?: string;
 }
 
+export interface ChannelPost {
+  id: string;
+  author: User;
+  content: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video';
+  createdAt: string;
+  createdTimestamp: number;
+}
+
+export interface Channel {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  avatar: string;
+  coverImage: string;
+  owner: User;
+  ownerId: string;
+  adminIds: string[];
+  subscriberIds: string[];
+  isPrivate: boolean;
+  posts: ChannelPost[];
+  createdAt: string;
+  isSubscribed?: boolean;
+}
+
 export interface Product {
   id: string;
   ownerId?: string;
