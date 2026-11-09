@@ -315,13 +315,14 @@ class ApiClient {
     senderId: string,
     text: string,
     mediaUrl?: string,
-    audioDuration?: number
+    audioDuration?: number,
+    mediaType?: 'image' | 'video' | 'file'
   ): Promise<Message> {
     const res = await this.request<{ success: boolean; message: Message }>(
       `/api/conversations/${conversationId}/messages`,
       {
         method: 'POST',
-        body: JSON.stringify({ senderId, text, mediaUrl, audioDuration }),
+        body: JSON.stringify({ senderId, text, mediaUrl, audioDuration, mediaType }),
       }
     );
     return res.message;
