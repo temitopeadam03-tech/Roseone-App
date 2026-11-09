@@ -101,11 +101,16 @@ export const MessagesView: React.FC = () => {
       reader.onload = async () => {
         if (typeof reader.result === 'string') {
           const raw = reader.result;
+          const mediaType: 'image' | 'video' | 'file' = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : 'file';
           try {
             const url = await uploadMedia(raw, file.name);
-            sendMessage(activeConversation.id, 'Shared a photo', url);
+            sendMessage(activeConversation.id, mediaType === 'video' ? 'Shared a video' : 'Shared a photo', url, undefined, mediaType);
           } catch {
-            sendMessage(activeConversation.id, 'Shared a photo', raw);
+            if (mediaType === 'video') {
+              showToast('Video upload failed. Please try a smaller video or check storage availability.', 'error');
+              return;
+            }
+            sendMessage(activeConversation.id, 'Shared a photo', raw, undefined, mediaType);
           }
         }
       };
@@ -398,13 +403,22 @@ export const MessagesView: React.FC = () => {
                             : 'bg-white dark:bg-[#1f1a24] text-slate-900 dark:text-white rounded-bl-xs border border-slate-200/80 dark:border-slate-800'
                         }`}
                       >
-                        {msg.mediaUrl && (
+                        {msg.mediaUrl && (msg.mediaType === 'video' ? (
+                          <video
+                            src={msg.mediaUrl}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            className="w-full max-h-72 rounded-xl mb-2 bg-black"
+                            aria-label="Shared video"
+                          />
+                        ) : (
                           <img
                             src={msg.mediaUrl}
-                            alt="Attachment"
+                            alt="Shared attachment"
                             className="w-full max-h-56 object-cover rounded-xl mb-2"
                           />
-                        )}
+                        ))}
 
                         {msg.audioDuration ? (
                           <div className="flex items-center gap-3 min-w-[200px] py-1">
@@ -532,7 +546,7 @@ export const MessagesView: React.FC = () => {
                   <Image className="w-5 h-5" />
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     onChange={handleFileUpload}
                     className="hidden"
                   />
