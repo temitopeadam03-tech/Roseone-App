@@ -91,6 +91,7 @@ export interface Post {
   reactionCounts?: Partial<Record<ReactionType, number>>;
   commentsCount: number;
   repostsCount: number;
+  sharesCount?: number;
   viewsCount: number;
   isLiked?: boolean;
   userReaction?: ReactionType;
