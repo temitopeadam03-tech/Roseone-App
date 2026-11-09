@@ -944,6 +944,34 @@ export function createExpressApp() {
     }
   });
 
+  app.post('/api/conversations/:id/messages/:messageId/pin', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const conversation = storage.getConversations(authUser.id).find((item) => item.id === req.params.id);
+      if (!conversation) return res.status(404).json({ success: false, error: 'Conversation not found.' });
+      storage.togglePinMessage(req.params.id, req.params.messageId);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not update pinned message.' });
+    }
+  });
+
+  app.post('/api/conversations/:id/messages/:messageId/react', (req: Request, res: Response) => {
+    try {
+      const authUser = getAuthUser(req);
+      const emoji = String(req.body?.emoji || '').trim();
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      if (!emoji) return res.status(400).json({ success: false, error: 'A reaction is required.' });
+      const conversation = storage.getConversations(authUser.id).find((item) => item.id === req.params.id);
+      if (!conversation) return res.status(404).json({ success: false, error: 'Conversation not found.' });
+      storage.reactToMessage(req.params.id, req.params.messageId, emoji);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Could not react to message.' });
+    }
+  });
+
   app.post('/api/conversations/:id/read', (req: Request, res: Response) => {
     try {
       const { id } = req.params;
