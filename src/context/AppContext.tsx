@@ -795,76 +795,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [reshareModalPost, setReshareModalPost] = useState<Post | null>(null);
 
-  const reactToPost = (postId: string, reaction: ReactionType) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === postId) {
-          const currentReaction = p.reactions?.[currentUser.id];
-          const nextReactions = { ...(p.reactions || {}) };
-          const nextCounts = { ...(p.reactionCounts || {}) };
-
-          if (currentReaction === reaction) {
-            // Toggle off: remove reaction
-            delete nextReactions[currentUser.id];
-            if (nextCounts[reaction]) {
-              nextCounts[reaction] = Math.max(0, (nextCounts[reaction] || 1) - 1);
-            }
-            const totalLikes = Object.keys(nextReactions).length;
-            showToast('Reaction removed', 'info');
-            return {
-              ...p,
-              isLiked: false,
-              userReaction: undefined,
-              reactions: nextReactions,
-              reactionCounts: nextCounts,
-              likesCount: totalLikes,
-            };
-          } else {
-            // If had an old reaction, decrement old count
-            if (currentReaction && nextCounts[currentReaction]) {
-              nextCounts[currentReaction] = Math.max(0, nextCounts[currentReaction] - 1);
-            }
-            // Add or change to new reaction
-            nextReactions[currentUser.id] = reaction;
-            nextCounts[reaction] = (nextCounts[reaction] || 0) + 1;
-            const totalLikes = Object.keys(nextReactions).length;
-
-            const reactionEmojis: Record<ReactionType, string> = {
-              like: '👍',
-              love: '❤️',
-              fire: '🔥',
-              rose: '🌹',
-              clap: '👏',
-              insight: '💡',
-            };
-
-            showToast(`Reacted ${reactionEmojis[reaction]}!`, 'success');
-
-            // Notify post author if not currentUser
-            if (p.author.id !== currentUser.id) {
-              addNotification({
-                type: 'reaction',
-                actor: currentUser,
-                title: `${currentUser.name} reacted ${reactionEmojis[reaction]} to your post`,
-                previewText: p.content.slice(0, 60),
-                targetType: 'post',
-                targetId: p.id,
-              });
-            }
-
-            return {
-              ...p,
-              isLiked: true,
-              userReaction: reaction,
-              reactions: nextReactions,
-              reactionCounts: nextCounts,
-              likesCount: totalLikes,
-            };
-          }
-        }
-        return p;
-      })
-    );
+  const reactToPost = async (postId: string, reaction: ReactionType) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      const savedPost = await api.reactToPost(postId, reaction);
+      setPosts((prev) => prev.map((post) => post.id === postId ? savedPost : post));
+      const reactionEmojis: Record<ReactionType, string> = {
+        like: '👍', love: '❤️', fire: '🔥', rose: '🌹', clap: '👏', insight: '💡',
+      };
+      showToast(`Reacted ${reactionEmojis[reaction]}!`, 'success');
+    } catch (error) {
+      console.error('Post reaction could not be saved:', error);
+      showToast(error instanceof Error ? error.message : 'Reaction could not be saved. Please retry.', 'error');
+    }
   };
 
   const toggleLikePost = (postId: string) => {
@@ -998,55 +941,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Post deleted', 'info');
   };
 
-  const addComment = (postId: string, content: string, replyToCommentId?: string) => {
-    const targetPost = posts.find((p) => p.id === postId);
-    const newComment: Comment = {
-      id: `comm_${Date.now()}`,
-      postId,
-      author: currentUser,
-      content,
-      createdAt: 'Just now',
-      createdTimestamp: Date.now(),
-      likesCount: 0,
-      isLiked: false,
-    };
-
-    setComments((prev) => {
-      const postComments = prev[postId] || [];
-      if (replyToCommentId) {
-        return {
-          ...prev,
-          [postId]: postComments.map((c) => {
-            if (c.id === replyToCommentId) {
-              return { ...c, replies: [...(c.replies || []), newComment] };
-            }
-            return c;
-          }),
-        };
-      }
-      return {
-        ...prev,
-        [postId]: [newComment, ...postComments],
-      };
-    });
-
-    setPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, commentsCount: p.commentsCount + 1 } : p))
-    );
-
-    // If commenting on someone else's post, create notification
-    if (targetPost && targetPost.author.id !== currentUser.id) {
-      addNotification({
-        type: 'comment',
-        actor: currentUser,
-        title: `${currentUser.name} commented on your post`,
-        previewText: content.slice(0, 60),
-        targetType: 'post',
-        targetId: postId,
+  const addComment = async (postId: string, content: string, replyToCommentId?: string) => {
+    try {
+      dataMutationVersionRef.current += 1;
+      const savedComment = await api.addComment(postId, currentUser.id, content, undefined, undefined, replyToCommentId);
+      setComments((prev) => {
+        const postComments = prev[postId] || [];
+        if (replyToCommentId) {
+          return {
+            ...prev,
+            [postId]: postComments.map((item) => item.id === replyToCommentId
+              ? { ...item, replies: [...(item.replies || []), savedComment] }
+              : item),
+          };
+        }
+        return { ...prev, [postId]: [savedComment, ...postComments] };
       });
+      setPosts((prev) => prev.map((post) => post.id === postId
+        ? { ...post, commentsCount: (post.commentsCount || 0) + 1 }
+        : post));
+      const targetPost = posts.find((post) => post.id === postId);
+      if (targetPost && targetPost.author.id !== currentUser.id) {
+        addNotification({
+          type: 'comment',
+          actor: currentUser,
+          title: `${currentUser.name} commented on your post`,
+          previewText: content.slice(0, 60),
+          targetType: 'post',
+          targetId: postId,
+        });
+      }
+      showToast('Comment posted', 'success');
+    } catch (error) {
+      console.error('Comment save failed:', error);
+      showToast(error instanceof Error ? error.message : 'Comment could not be saved. Please retry.', 'error');
     }
-
-    showToast('Comment posted', 'success');
   };
 
   const addVoiceComment = (
