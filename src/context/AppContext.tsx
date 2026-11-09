@@ -121,7 +121,7 @@ interface AppContextType {
   conversations: Conversation[];
   activeConversationId: string | null;
   setActiveConversationId: (id: string | null) => void;
-  sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number) => Promise<void>;
+  sendMessage: (conversationId: string, text: string, mediaUrl?: string, audioDuration?: number, mediaType?: 'image' | 'video' | 'file') => Promise<void>;
   setDisappearingMessages: (conversationId: string, seconds: number) => Promise<void>;
   startNewConversation: (recipientName: string, recipientHandle: string, initialMessage?: string) => Promise<void>;
   createGroupConversation: (title: string, participantIds: string[], initialMessage?: string) => Promise<void>;
@@ -1433,11 +1433,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     conversationId: string,
     text: string,
     mediaUrl?: string,
-    audioDuration?: number
+    audioDuration?: number,
+    mediaType?: 'image' | 'video' | 'file'
   ): Promise<void> => {
     try {
       dataMutationVersionRef.current += 1;
-      const savedMessage = await api.sendMessage(conversationId, currentUser.id, text, mediaUrl, audioDuration);
+      const savedMessage = await api.sendMessage(conversationId, currentUser.id, text, mediaUrl, audioDuration, mediaType);
       setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
         ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now', messages: [...conversation.messages, savedMessage] }
         : conversation));
