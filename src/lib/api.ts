@@ -490,6 +490,21 @@ class ApiClient {
     return res.community;
   }
 
+  public async updateCommunity(id: string, updates: Partial<Community>): Promise<Community> {
+    const res = await this.request<{ success: boolean; community: Community }>(`/api/communities/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ updates }),
+    });
+    return res.community;
+  }
+
+  public async deleteCommunity(id: string): Promise<boolean> {
+    const res = await this.request<{ success: boolean }>(`/api/communities/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+    return res.success;
+  }
+
   public async joinCommunity(id: string): Promise<boolean> {
     const res = await this.request<{ success: boolean; isJoined: boolean }>(
       `/api/communities/${id}/join`,
