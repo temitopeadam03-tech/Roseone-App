@@ -163,7 +163,7 @@ const MainContent: React.FC = () => {
       <ToastNotification />
 
       {/* Fully-Responsive Main Container */}
-      <main className="flex-1 w-full mx-auto px-2.5 sm:px-4 lg:px-6 2xl:px-8 py-3 sm:py-5">
+      <main className="flex-1 w-full mx-auto px-2 py-1">
         {/* Mobile & Tablet Viewport (Screen width < 1024px): Naturally responsive layout */}
         <div className={`block lg:hidden mx-auto pb-24 w-full transition-all ${isWideFullView ? 'max-w-none' : 'max-w-none'}`}>
           {renderCurrentView()}
@@ -178,7 +178,7 @@ const MainContent: React.FC = () => {
         </div>
 
         {/* Desktop Viewport (Screen width >= 1024px): Full-width spacious responsive workspace */}
-        <div className="hidden lg:flex justify-center gap-6 xl:gap-8 items-start w-full max-w-[1800px] mx-auto">
+        <div className="hidden lg:flex justify-center gap-2 items-start w-full max-w-none mx-auto">
           {/* Left Navigation Sidebar */}
           <DesktopSidebar />
 
