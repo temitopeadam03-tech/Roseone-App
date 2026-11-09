@@ -1412,14 +1412,27 @@ export class PersistentStorage {
     return true;
   }
 
-  public joinCommunity(communityId: string): boolean {
+  public joinCommunity(communityId: string, userId: string): boolean {
     const comm = this.db.communities.find((c) => c.id === communityId);
-    if (!comm) return false;
-
-    comm.isJoined = !comm.isJoined;
-    comm.membersCount = comm.isJoined ? comm.membersCount + 1 : Math.max(1, comm.membersCount - 1);
+    const user = this.getUserById(userId);
+    if (!comm || !user) throw new Error('Community or member not found.');
+    comm.memberList = comm.memberList || [];
+    if (!comm.memberList.some((member) => member.user.id === userId)) {
+      comm.memberList.push({ user, role: 'member', joinedDate: new Date().toISOString() });
+    }
+    comm.membersCount = Math.max(1, comm.memberList.length);
     this.schedulePersist();
-    return comm.isJoined;
+    return true;
+  }
+
+  public leaveCommunity(communityId: string, userId: string): boolean {
+    const comm = this.db.communities.find((c) => c.id === communityId);
+    if (!comm) throw new Error('Community not found.');
+    if (comm.ownerId === userId) throw new Error('The owner cannot leave their own community. Transfer ownership or delete the space instead.');
+    comm.memberList = (comm.memberList || []).filter((member) => member.user.id !== userId);
+    comm.membersCount = Math.max(1, comm.memberList.length);
+    this.schedulePersist();
+    return true;
   }
 
   // --- Authentication & User Accounts ---
