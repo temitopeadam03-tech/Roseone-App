@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import { supabase } from '../lib/supabase';
 import {
@@ -1399,6 +1399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     try {
+      dataMutationVersionRef.current += 1;
       const savedConversation = await api.createConversation(currentUser.id, recipientUser.id, initialMessage);
       setConversations((prev) => [savedConversation, ...prev.filter((item) => item.id !== savedConversation.id)]);
       setActiveConversationId(savedConversation.id);
@@ -1418,6 +1419,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     audioDuration?: number
   ): Promise<void> => {
     try {
+      dataMutationVersionRef.current += 1;
       const savedMessage = await api.sendMessage(conversationId, currentUser.id, text, mediaUrl, audioDuration);
       setConversations((prev) => prev.map((conversation) => conversation.id === conversationId
         ? { ...conversation, lastMessageTime: savedMessage.createdAt || 'Just now', messages: [...conversation.messages, savedMessage] }
@@ -1596,6 +1598,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     try {
+      dataMutationVersionRef.current += 1;
       const savedCommunity = await api.createCommunity({ ...newComm, ownerId: currentUser.id });
       setCommunities((prev) => [savedCommunity, ...prev.filter((community) => community.id !== savedCommunity.id)]);
       setActiveCommunityId(savedCommunity.id);
@@ -2121,6 +2124,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sharesCount: 0,
       isSaved: false,
     };
+    dataMutationVersionRef.current += 1;
     setMarketplaceListings((prev) => [newListing, ...prev]);
     void api.createListing(currentUser.id, data)
       .then((savedListing) => setMarketplaceListings((prev) => prev.map((listing) => listing.id === newListing.id ? savedListing : listing)))
@@ -2363,12 +2367,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [isDataLoading, setIsDataLoading] = useState(false);
+  // Ignore bootstrap responses that started before a successful user mutation.
+  const dataMutationVersionRef = useRef(0);
 
   const refreshData = async () => {
+    const requestVersion = dataMutationVersionRef.current;
     try {
       setIsDataLoading(true);
       const data = await api.getBootstrap(currentUser.id);
-      if (data) {
+      if (data && requestVersion === dataMutationVersionRef.current) {
         if (Array.isArray(data.posts)) setPosts(data.posts);
         if (data.comments) setComments(data.comments);
         if (Array.isArray(data.stories)) setStories(data.stories);
