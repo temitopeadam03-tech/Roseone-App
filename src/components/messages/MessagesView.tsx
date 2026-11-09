@@ -33,6 +33,7 @@ export const MessagesView: React.FC = () => {
     sendMessage,
     setDisappearingMessages,
     startNewConversation,
+    createGroupConversation,
     togglePinMessage,
     reactToMessage,
     currentUser,
@@ -56,6 +57,9 @@ export const MessagesView: React.FC = () => {
   const [newRecipientName, setNewRecipientName] = useState('');
   const [newRecipientHandle, setNewRecipientHandle] = useState('');
   const [firstMessage, setFirstMessage] = useState('');
+  const [isGroupChat, setIsGroupChat] = useState(false);
+  const [groupTitle, setGroupTitle] = useState('');
+  const [selectedGroupMemberIds, setSelectedGroupMemberIds] = useState<string[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -131,13 +135,26 @@ export const MessagesView: React.FC = () => {
     }
   };
 
-  const handleStartChat = (e: React.FormEvent) => {
+  const handleStartChat = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isGroupChat) {
+      if (selectedGroupMemberIds.length < 2) {
+        showToast('Select at least two members for your group.', 'error');
+        return;
+      }
+      await createGroupConversation(groupTitle.trim() || 'New Group', selectedGroupMemberIds, firstMessage.trim() || undefined);
+      setNewChatModalOpen(false);
+      setGroupTitle('');
+      setSelectedGroupMemberIds([]);
+      setFirstMessage('');
+      setIsGroupChat(false);
+      return;
+    }
     if (!newRecipientHandle.trim()) {
       showToast('Please enter a username or handle', 'error');
       return;
     }
-    startNewConversation(newRecipientName, newRecipientHandle, firstMessage.trim() || undefined);
+    await startNewConversation(newRecipientName, newRecipientHandle, firstMessage.trim() || undefined);
     setNewChatModalOpen(false);
     setNewRecipientName('');
     setNewRecipientHandle('');
@@ -571,13 +588,17 @@ export const MessagesView: React.FC = () => {
           <div className="bg-white dark:bg-[#17131A] rounded-2xl w-full max-w-sm p-5 border border-slate-200 dark:border-slate-800 shadow-2xl">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                New Conversation
+                {isGroupChat ? 'Create Group Chat' : 'New Conversation'}
               </h3>
               <button onClick={() => setNewChatModalOpen(false)}>
                 <X className="w-4 h-4 text-slate-400 hover:text-slate-600" />
               </button>
             </div>
             <form onSubmit={handleStartChat} className="space-y-3">
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 dark:bg-slate-800/70 p-1">
+                <button type="button" onClick={() => setIsGroupChat(false)} className={`rounded-lg py-2 text-xs font-bold ${!isGroupChat ? 'bg-white dark:bg-[#2a2230] text-[#BE185D] shadow-sm' : 'text-slate-500'}`}>Direct message</button>
+                <button type="button" onClick={() => setIsGroupChat(true)} className={`rounded-lg py-2 text-xs font-bold ${isGroupChat ? 'bg-white dark:bg-[#2a2230] text-[#BE185D] shadow-sm' : 'text-slate-500'}`}>Group chat</button>
+              </div>
               {/* Quick Contact Suggestions */}
               {allUsers.filter((u) => u.id !== currentUser.id).length > 0 && (
                 <div>
@@ -592,24 +613,28 @@ export const MessagesView: React.FC = () => {
                           key={u.id}
                           type="button"
                           onClick={() => {
-                            setNewRecipientHandle(u.handle);
-                            setNewRecipientName(u.name);
+                            if (isGroupChat) {
+                              setSelectedGroupMemberIds((prev) => prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]);
+                            } else {
+                              setNewRecipientHandle(u.handle);
+                              setNewRecipientName(u.name);
+                            }
                           }}
                           className={`px-2.5 py-1 rounded-xl text-xs flex items-center gap-1.5 border transition-all ${
-                            newRecipientHandle === u.handle
+                            (isGroupChat ? selectedGroupMemberIds.includes(u.id) : newRecipientHandle === u.handle)
                               ? 'border-[#E91E8C] bg-[#FCE7F3] dark:bg-[#BE185D]/20 text-[#BE185D] dark:text-[#FCE7F3] font-bold'
                               : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 text-slate-700 dark:text-slate-300'
                           }`}
                         >
                           <Avatar src={u.avatar} name={u.name} size="xs" />
-                          <span>@{u.handle}</span>
+                          <span>{isGroupChat ? (selectedGroupMemberIds.includes(u.id) ? '✓ ' : '') : '@'}{isGroupChat ? u.name : u.handle}</span>
                         </button>
                       ))}
                   </div>
                 </div>
               )}
 
-              <div>
+              <div className={isGroupChat ? 'hidden' : 'block'}>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Recipient Username or Handle
                 </label>
@@ -626,7 +651,7 @@ export const MessagesView: React.FC = () => {
                 </div>
               </div>
 
-              <div>
+              <div className={isGroupChat ? 'hidden' : 'block'}>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Display Name (Optional)
                 </label>
@@ -639,6 +664,19 @@ export const MessagesView: React.FC = () => {
                 />
               </div>
 
+              {isGroupChat && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Group name</label>
+                  <input
+                    type="text"
+                    value={groupTitle}
+                    onChange={(e) => setGroupTitle(e.target.value)}
+                    placeholder="e.g. Project Team"
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">{selectedGroupMemberIds.length} member(s) selected, plus you</p>
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Initial Message (Optional)
@@ -664,7 +702,7 @@ export const MessagesView: React.FC = () => {
                   type="submit"
                   className="flex-1 py-1.5 text-xs font-bold rounded-xl bg-[#E91E8C] text-white hover:bg-[#BE185D]"
                 >
-                  Start Chat
+                  {isGroupChat ? 'Create Group' : 'Start Chat'}
                 </button>
               </div>
             </form>
