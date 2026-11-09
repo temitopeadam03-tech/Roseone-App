@@ -248,6 +248,37 @@ export class PersistentStorage {
     }
   }
 
+  /**
+   * Re-read the shared snapshot before each API request. Render can serve
+   * requests on different instances; a process-local cache must never be
+   * treated as the latest cross-device state.
+   */
+  private durableRefreshPromise: Promise<void> = Promise.resolve();
+
+  public async refreshDurable(): Promise<void> {
+    if (!this.durableClient || !this.durableInitialized) return;
+    const refresh = this.durableRefreshPromise.catch(() => undefined).then(async () => {
+      const { data, error } = await this.durableClient!
+        .from('gistupp_app_state')
+        .select('state')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw new Error(`[storage] Could not refresh shared app data: ${error.message}`);
+      if (!data?.state || typeof data.state !== 'object') return;
+      const remote = data.state as Partial<DatabaseSchema>;
+      this.db = cleanLegacyDatabase({
+        ...getInitialDatabase(),
+        ...remote,
+        // These remain process-local and are never part of the shared snapshot.
+        userCredentials: this.db.userCredentials || {},
+        sessions: this.db.sessions || {},
+      } as DatabaseSchema);
+      this.persistSync(this.db);
+    });
+    this.durableRefreshPromise = refresh;
+    await refresh;
+  }
+
   /** Move legacy inline image data out of the JSON snapshot before the next durable write. */
   private async migrateInlineImages(value: any, cache = new Map<string, string>()): Promise<{ value: any; changed: boolean }> {
     if (typeof value === 'string') {
