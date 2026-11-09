@@ -2560,7 +2560,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     communitiesHydratedRef.current = false;
     void refreshData();
-    const syncTimer = window.setInterval(() => { void refreshData(); }, 15000);
+    const syncTimer = window.setInterval(() => { void refreshData(); }, 3000);
     const onFocus = () => { void refreshData(); };
     window.addEventListener('focus', onFocus);
     return () => { window.clearInterval(syncTimer); window.removeEventListener('focus', onFocus); };
