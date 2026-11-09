@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420">
+<g transform="translate(25 20) scale(3.1)">
+<path d="M91.2 22.8A46 46 0 1 0 100 67.5H80.5A27.8 27.8 0 1 1 76.2 38.8L91.2 22.8Z" fill="#F20A83" fill-rule="evenodd"/>
+<path d="M26.8 86.8C45.7 84.6 69.4 76.4 91.5 59.9L105 43.5L104.1 66.7L87.3 58.8C68.1 75.5 45.6 87.8 24.1 92.2C10.8 95 3.4 90.7 4.2 82.5C4.8 76.7 10.1 69.7 17.3 63.4C12.1 71.7 11.1 78.3 14.4 82.1C17 85.1 21.2 87.1 26.8 86.8Z" fill="#F20A83"/>
+<path d="M25.5 31.2A45.8 45.8 0 0 0 17.1 62.7L32.2 61.8A29.2 29.2 0 0 1 48.1 28.4L25.5 31.2Z" fill="#A90058"/>
+<path d="M45.2 74.2A28.8 28.8 0 0 0 75.8 87.1L81.2 72.8A28.7 28.7 0 0 1 62.1 77.5L45.2 74.2Z" fill="#A90058"/>
+</g>
+<text x="400" y="340" font-family="Arial, sans-serif" font-size="170" font-weight="800" letter-spacing="-10" fill="#A90058">Gist</text>
+<text x="730" y="340" font-family="Arial, sans-serif" font-size="170" font-weight="800" letter-spacing="-10" fill="#F20A83">Upp</text>
+</svg>
