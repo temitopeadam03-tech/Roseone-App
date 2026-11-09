@@ -335,7 +335,7 @@ class ApiClient {
       '/api/conversations',
       {
         method: 'POST',
-        body: JSON.stringify({ currentUserId, recipientId, initialMessage }),
+        body: JSON.stringify({ participantIds: [currentUserId, recipientId], initialMessage }),
       }
     );
     return res.conversation;
