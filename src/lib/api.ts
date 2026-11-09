@@ -342,6 +342,14 @@ class ApiClient {
     return res.conversation;
   }
 
+  public async createGroupConversation(title: string, participantIds: string[], initialMessage?: string): Promise<Conversation> {
+    const res = await this.request<{ success: boolean; conversation: Conversation }>(
+      '/api/conversations/group',
+      { method: 'POST', body: JSON.stringify({ title, participantIds, initialMessage }) }
+    );
+    return res.conversation;
+  }
+
   public async setDisappearingMessages(conversationId: string, seconds: number): Promise<Conversation> {
     const res = await this.request<{ success: boolean; conversation: Conversation }>(
       `/api/conversations/${conversationId}/disappearing`,
