@@ -1124,6 +1124,39 @@ export class PersistentStorage {
     return newConv;
   }
 
+  public createGroupConversation(creatorId: string, participantIds: string[], title: string, initialMessage?: string): Conversation {
+    const uniqueIds = Array.from(new Set([creatorId, ...participantIds].filter(Boolean)));
+    if (uniqueIds.length < 3) throw new Error('Choose at least two other members for a group chat.');
+    const participants = uniqueIds.map((id) => this.getUserById(id));
+    if (participants.some((user) => !user)) throw new Error('One or more selected members could not be found.');
+    const creator = this.getUserById(creatorId);
+    if (!creator) throw new Error('Group creator could not be found.');
+    const now = Date.now();
+    const conversation: Conversation = {
+      id: `group_${now}_${Math.random().toString(36).slice(2, 7)}`,
+      title: title.trim() || 'New Group',
+      isGroup: true,
+      avatar: '',
+      participants: participants as User[],
+      messages: [],
+      unreadCount: 0,
+      lastMessageTime: 'Just now',
+      disappearingMessagesSeconds: 0,
+    };
+    if (initialMessage?.trim()) {
+      conversation.messages.push({
+        id: `msg_${now}`,
+        senderId: creatorId,
+        text: initialMessage.trim(),
+        createdAt: 'Just now',
+        isRead: false,
+      });
+    }
+    this.db.conversations.unshift(conversation);
+    this.schedulePersist();
+    return conversation;
+  }
+
   public markConversationRead(conversationId: string, _userId?: string): void {
     const conv = this.db.conversations.find((c) => c.id === conversationId);
     if (conv) {
