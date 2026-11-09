@@ -308,7 +308,7 @@ export const MessagesView: React.FC = () => {
                 </h3>
                 <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Encrypted Direct Message
+                  {activeConversation.isGroup ? `Group conversation · ${activeConversation.participants.length} members` : 'Direct conversation'}
                 </span>
               </div>
             </div>
@@ -659,7 +659,7 @@ export const MessagesView: React.FC = () => {
                     value={newRecipientHandle}
                     onChange={(e) => setNewRecipientHandle(e.target.value)}
                     placeholder="username"
-                    required
+                    required={!isGroupChat}
                     className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#17131A] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E91E8C]"
                   />
                 </div>
