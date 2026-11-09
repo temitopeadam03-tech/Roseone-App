@@ -9,14 +9,15 @@ import { AccessToken } from 'livekit-server-sdk';
 export function createExpressApp() {
   const app = express();
 
-  // Hydrate the shared database before authentication or API handlers can
-  // read/write state. This makes every device use the same durable snapshot.
+  // Initialize the shared snapshot once when this single-instance service starts.
+  // Do NOT reload the JSON snapshot on every API request: frequent bootstrap polls
+  // can race with a write that is still being committed and replace the in-memory
+  // mutation with the older database value. Render is configured for one instance
+  // and one Node worker, so this process remains the authoritative live cache;
+  // every response waits for flushDurable() below before it is acknowledged.
   app.use(async (_req: Request, _res: Response, next: NextFunction) => {
     try {
       await storage.initializeDurable();
-      // Rehydrate from Supabase on every request so phone/laptop requests
-      // handled by different Render instances see the same latest snapshot.
-      if (_req.path.startsWith('/api/')) await storage.refreshDurable();
       next();
     } catch (error) {
       console.error('[storage] Durable database initialization failed:', error);
