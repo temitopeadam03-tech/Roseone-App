@@ -342,6 +342,14 @@ class ApiClient {
     return res.conversation;
   }
 
+  public async setDisappearingMessages(conversationId: string, seconds: number): Promise<Conversation> {
+    const res = await this.request<{ success: boolean; conversation: Conversation }>(
+      `/api/conversations/${conversationId}/disappearing`,
+      { method: 'PUT', body: JSON.stringify({ seconds }) }
+    );
+    return res.conversation;
+  }
+
   public async markConversationRead(conversationId: string) {
     return this.request<{ success: boolean }>(`/api/conversations/${conversationId}/read`, {
       method: 'POST',
