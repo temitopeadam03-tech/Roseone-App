@@ -945,7 +945,7 @@ export function createExpressApp() {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
-      const { text, voiceUrl, voiceDuration, mediaUrl } = req.body;
+      const { text, voiceUrl, voiceDuration, mediaUrl, mediaType } = req.body;
       const senderId = authUser?.id;
 
       if (!senderId || (!text && !voiceUrl && !mediaUrl)) {
@@ -953,7 +953,7 @@ export function createExpressApp() {
         return;
       }
 
-      const message = storage.sendMessage(id, senderId, text, voiceUrl, voiceDuration, mediaUrl);
+      const message = storage.sendMessage(id, senderId, text, voiceUrl, voiceDuration, mediaUrl, mediaType);
       res.status(201).json({ success: true, message });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
