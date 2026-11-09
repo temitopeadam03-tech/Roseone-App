@@ -2181,13 +2181,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const markListingStatus = (id: string, status: ListingStatus) => {
-    setMarketplaceListings((prev) =>
-      prev.map((l) => (l.id === id ? { ...l, status } : l))
-    );
-    if (activeListing && activeListing.id === id) {
-      setActiveListing((prev) => (prev ? { ...prev, status } : null));
-    }
-    showToast(`Listing marked as ${status}`, 'success');
+    void updateListing(id, { status });
   };
 
   const contactSeller = (listing: MarketplaceListing) => {
