@@ -934,6 +934,10 @@ export function createExpressApp() {
 
   app.get('/api/conversations/:id/messages', (req: Request, res: Response) => {
     try {
+      const authUser = getAuthUser(req);
+      if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
+      const conversation = storage.getConversations(authUser.id).find((item) => item.id === req.params.id);
+      if (!conversation) return res.status(404).json({ success: false, error: 'Conversation not found.' });
       const messages = storage.getMessages(req.params.id);
       res.json({ success: true, messages });
     } catch (err: any) {
