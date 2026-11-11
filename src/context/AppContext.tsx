@@ -93,7 +93,7 @@ interface AppContextType {
   resharePostWithQuote: (originalPostId: string, quoteCaption?: string) => void;
   votePoll: (postId: string, optionId: string) => void;
   deletePost: (postId: string) => void;
-  addComment: (postId: string, content: string, replyToCommentId?: string) => void;
+  addComment: (postId: string, content: string, replyToCommentId?: string) => Promise<boolean>;
   addVoiceComment: (postId: string, voiceUrl: string, voiceDuration: number, textCaption?: string, replyToCommentId?: string) => void;
   deleteComment: (postId: string, commentId: string, isReply?: boolean, parentCommentId?: string) => void;
   toggleLikeComment: (postId: string, commentId: string) => void;
