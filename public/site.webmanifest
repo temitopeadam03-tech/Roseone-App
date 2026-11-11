@@ -10,13 +10,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg",
+      "src": "/gistupp-mark.svg?v=20261111-brand2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/favicon.svg",
+      "src": "/gistupp-mark.svg?v=20261111-brand2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
@@ -26,5 +26,6 @@
     "social",
     "entertainment",
     "productivity"
-  ]
+  ],
+  "id": "/"
 }
