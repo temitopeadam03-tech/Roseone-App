@@ -1,7 +1,6 @@
 import React from 'react';
 import { useApp, AppProvider } from './context/AppContext';
 import { TopHeader } from './components/layout/TopHeader';
-import { AndroidNavBar } from './components/layout/AndroidStatusBar';
 import { AndroidBottomTabs } from './components/layout/AndroidBottomTabs';
 import { AndroidDrawerMenu } from './components/layout/AndroidDrawerMenu';
 import { DesktopSidebar } from './components/layout/DesktopSidebar';
@@ -172,7 +171,6 @@ const MainContent: React.FC = () => {
           <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800">
             <div className="w-full max-w-none mx-auto">
               <AndroidBottomTabs />
-              <AndroidNavBar />
             </div>
           </div>
         </div>
