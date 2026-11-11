@@ -58,7 +58,7 @@ export const AndroidBottomTabs: React.FC = () => {
   return (
     <nav
       aria-label="Gistupp Android Bottom Navigation"
-      className="grid grid-cols-5 items-center h-16 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-2 select-none z-30 shrink-0"
+      className="grid grid-cols-5 items-center h-14 min-h-14 bg-white/95 dark:bg-[#17131A]/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800/80 px-1 select-none z-30 shrink-0"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
@@ -67,7 +67,7 @@ export const AndroidBottomTabs: React.FC = () => {
             key={tab.id}
             onClick={() => handleTabClick(tab.id)}
             style={isActive ? { color: 'var(--brand-accent)' } : undefined}
-            className={`min-h-[52px] flex flex-col items-center justify-center gap-0.5 transition-colors ${
+            className={`h-14 min-h-0 flex flex-col items-center justify-center gap-0.5 transition-colors ${
               isActive
                 ? 'text-[#E91E8C] font-semibold'
                 : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
