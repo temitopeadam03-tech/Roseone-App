@@ -10,13 +10,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/gistupp-mark.svg?v=20261111-brand2",
+      "src": "/favicon.svg?v=20261111-brand3",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/gistupp-mark.svg?v=20261111-brand2",
+      "src": "/favicon.svg?v=20261111-brand3",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
