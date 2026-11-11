@@ -182,12 +182,12 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     .filter(Boolean);
 
   return (
-    <article className="bg-white dark:bg-[#17131A] rounded-2xl border border-slate-200/80 dark:border-slate-800/80 overflow-hidden shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
+    <article className="w-full bg-white dark:bg-[#17131A] border-b border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
       {/* Header */}
-      <div className="p-3.5 sm:p-4 flex items-start justify-between">
+      <div className="px-3 py-2 flex items-start justify-between">
         <div
           onClick={() => setViewingUser(post.author)}
-          className="flex items-center gap-3 cursor-pointer group"
+          className="flex items-center gap-2 cursor-pointer group min-w-0"
         >
           <Avatar src={post.author.avatar} name={post.author.name} size="md" />
           <div>
@@ -281,7 +281,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       </div>
 
       {/* Content */}
-      <div className="px-3.5 sm:px-4 pb-3">
+      <div className="px-3 pb-2">
         {post.content && (
           <p className="text-sm sm:text-[15px] leading-relaxed text-slate-800 dark:text-slate-200 whitespace-pre-line">
             {post.content}
@@ -305,7 +305,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {/* Embedded Quotation / Reshared Post */}
       {post.resharedPost && (
-        <div className="px-3.5 sm:px-4 pb-3">
+        <div className="px-3 pb-2">
           <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 p-3.5 space-y-2.5 hover:border-[#E91E8C]/40 transition-colors">
             <div
               onClick={() => setViewingUser(post.resharedPost!.author)}
@@ -349,9 +349,9 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {/* Poll */}
       {post.poll && (
-        <div className="px-3.5 sm:px-4 pb-3">
-          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2.5">
+        <div className="px-3 pb-2">
+          <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
               {post.poll.question}
             </h4>
             <div className="space-y-2">
@@ -366,7 +366,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
                     key={opt.id}
                     disabled={hasVoted}
                     onClick={() => votePoll(post.id, opt.id)}
-                    className={`w-full relative overflow-hidden min-h-[44px] rounded-xl border p-2.5 text-left text-xs font-semibold transition-all ${
+                    className={`w-full relative overflow-hidden min-h-[38px] rounded-lg border p-2.5 text-left text-xs font-semibold transition-all ${
                       isSelected
                         ? 'border-[#E91E8C] text-[#BE185D] dark:text-[#FCE7F3]'
                         : 'border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
@@ -399,7 +399,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
       {/* Media Gallery */}
       {post.media && post.media.length > 0 && (
-        <div className="w-full pb-3">
+        <div className="w-full pb-2">
           <div className={`grid w-full gap-1 overflow-hidden ${post.media.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {post.media.map((imgUrl, i) => (
               <img
@@ -461,7 +461,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
       )}
 
       {/* Action Bar */}
-      <div className="relative px-3.5 sm:px-4 py-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-slate-500 dark:text-slate-400">
+      <div className="relative grid grid-cols-5 items-center gap-0 px-2 py-3 border-t border-slate-100 dark:border-slate-800/60 text-slate-500 dark:text-slate-400">
         {/* Like & Reaction Button with Hover / Click Picker */}
         <div
           className="relative"
@@ -475,7 +475,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         >
           <button
             onClick={() => toggleLikePost(post.id)}
-            className={`min-h-[40px] flex items-center gap-1.5 text-xs font-semibold transition-transform active:scale-95 ${
+            className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold transition-transform active:scale-95 ${
               post.isLiked ? 'text-[#E91E8C] font-bold' : 'hover:text-[#E91E8C]'
             }`}
             title="Like or react to post"
@@ -521,7 +521,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         {/* Comment Trigger */}
         <button
           onClick={() => setShowComments(!showComments)}
-          className={`min-h-[40px] flex items-center gap-1.5 text-xs font-semibold hover:text-[#E91E8C] transition-colors ${
+          className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold hover:text-[#E91E8C] transition-colors ${
             showComments ? 'text-[#E91E8C]' : ''
           }`}
           title="Comments and voice replies"
@@ -533,7 +533,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         {/* Reshare / Repost Trigger (Opens ReshareModal) */}
         <button
           onClick={() => setReshareModalPost(post)}
-          className={`min-h-[40px] flex items-center gap-1.5 text-xs font-semibold transition-transform active:scale-90 ${
+          className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold transition-transform active:scale-90 ${
             post.isReposted ? 'text-emerald-500 font-bold' : 'hover:text-emerald-500'
           }`}
           title="Reshare or Quote Post"
@@ -545,7 +545,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
         {/* Bookmark Trigger */}
         <button
           onClick={() => toggleSavePost(post.id)}
-          className={`min-h-[40px] flex items-center gap-1 text-xs font-semibold transition-colors ${
+          className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold transition-colors ${
             post.isSaved ? 'text-[#E91E8C]' : 'hover:text-slate-800 dark:hover:text-slate-200'
           }`}
           title="Save post"
@@ -555,21 +555,13 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
         {/* Share Link Trigger */}
         <button
-          onClick={() => void handleCopyLink()}
-          className="min-h-[40px] flex items-center gap-1 text-xs font-semibold hover:text-slate-800 dark:hover:text-slate-200"
-          title="Copy link"
-          aria-label="Copy post link"
-        >
-          <Copy className="w-4 h-4" />
-          <span className="tabular-nums">{sharesCount}</span>
-        </button>
-        <button
           onClick={() => void handleShare()}
-          className="min-h-[40px] flex items-center gap-1 text-xs font-semibold hover:text-slate-800 dark:hover:text-slate-200"
-          title="Share post"
+          className="w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold hover:text-slate-800 dark:hover:text-slate-200"
+          title="Share or copy link"
           aria-label="Share post"
         >
           <Share2 className="w-4 h-4" />
+          <span className="tabular-nums">{sharesCount}</span>
         </button>
       </div>
 
