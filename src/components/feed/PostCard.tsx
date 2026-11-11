@@ -501,7 +501,10 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
         {/* Comment Trigger */}
         <button
-          onClick={() => setShowComments((open) => !open)}\n          aria-expanded={showComments}\n          aria-controls={`post-comments-${post.id}`}\n          type="button"
+          onClick={() => setShowComments((open) => !open)}
+          aria-expanded={showComments}
+          aria-controls={`post-comments-${post.id}`}
+          type="button"
           className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold hover:text-[#E91E8C] transition-colors ${
             showComments ? 'text-[#E91E8C]' : ''
           }`}
