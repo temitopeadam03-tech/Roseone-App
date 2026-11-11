@@ -26,7 +26,18 @@ export function createExpressApp() {
   // of the JSON snapshot and overwrite another device's likes, comments, posts,
   // communities, channels, or messages.
   let requestQueue: Promise<void> = Promise.resolve();
-  app.use(async (_req: Request, res: Response, next: NextFunction) => {
+  app.use(async (req: Request, res: Response, next: NextFunction) => {
+    // Static assets, the SPA shell, and preflight requests must not contend for
+    // the shared-state lock. Only API calls read or mutate the durable snapshot.
+    const isApiRequest =
+      req.path === '/api' ||
+      req.path.startsWith('/api/') ||
+      req.path.startsWith('/.netlify/functions/api');
+    if (!isApiRequest || req.method === 'OPTIONS') {
+      next();
+      return;
+    }
+
     const previous = requestQueue;
     let release!: () => void;
     requestQueue = new Promise<void>((resolve) => { release = resolve; });
