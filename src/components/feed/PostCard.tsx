@@ -68,6 +68,10 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isSubmittingReply, setIsSubmittingReply] = useState(false);
   const commentsContainerRef = useRef<HTMLDivElement | null>(null);
+  const commentsSectionRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (showComments) requestAnimationFrame(() => commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+  }, [showComments]);
   const reactionTimeoutRef = useRef<any>(null);
 
   const postComments = comments[post.id] || [];
@@ -497,7 +501,7 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
 
         {/* Comment Trigger */}
         <button
-          onClick={() => setShowComments(!showComments)}
+          onClick={() => setShowComments((open) => !open)}\n          aria-expanded={showComments}\n          aria-controls={`post-comments-${post.id}`}\n          type="button"
           className={`w-full min-h-8 flex items-center justify-center gap-1 text-[11px] font-semibold hover:text-[#E91E8C] transition-colors ${
             showComments ? 'text-[#E91E8C]' : ''
           }`}
