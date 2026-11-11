@@ -117,7 +117,7 @@ export const FeedView: React.FC = () => {
 
   return (
     <div
-      className="w-full min-w-0 space-y-2 pb-4"
+      className="w-full min-w-0 space-y-1 pb-2"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
