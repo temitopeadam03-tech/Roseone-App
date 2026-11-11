@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Search, Compass, Users, TrendingUp, Heart, MessageCircle, Repeat2, Bookmark, Share2, Upload, X, ChevronUp, ChevronDown, Send, Volume2, VolumeX, UserPlus, UserCheck, Settings2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
@@ -14,6 +14,9 @@ export const ExploreView: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentText, setCommentText] = useState('');
+  const [playbackSettingsOpen, setPlaybackSettingsOpen] = useState(false);
+  const commentPanelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => { if (commentOpen) requestAnimationFrame(() => commentPanelRef.current?.focus()); }, [commentOpen, current?.id]);
   const [muted, setMuted] = useState(true);
   const query = searchQuery.trim().toLowerCase();
   const videoPosts = useMemo(() => posts.filter(p => (p.media || []).some(isVideoSource)), [posts]);
@@ -53,8 +56,14 @@ export const ExploreView: React.FC = () => {
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto no-scrollbar">
           {([{id:'discover',label:'Discover',icon:Compass},{id:'circle',label:'Circle',icon:Users},{id:'following',label:'Following',icon:Users},{id:'trending',label:'Trending',icon:TrendingUp}] as const).map(t => <button key={t.id} onClick={() => switchTab(t.id)} className={`shrink-0 border-b-2 px-1 pb-1 text-[11px] font-semibold transition-colors ${activeTab===t.id?'border-white text-white':'border-transparent text-white/65'}`}>{t.label}</button>)}
         </div>
-        <button onClick={() => { const next = !autoNext; setAutoNext(next); localStorage.setItem('roseone_video_auto_next', String(next)); }} aria-label={autoNext ? 'Turn off autoplay next' : 'Turn on autoplay next'} title={autoNext ? 'Autoplay next: on' : 'Autoplay next: off'} className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Settings2 size={15}/></button><button onClick={() => setCreatePostModalOpen(true)} aria-label="Upload video" title="Upload video" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Upload size={16}/></button>
+        <button onClick={() => setPlaybackSettingsOpen(v => !v)} aria-label="Playback controls" aria-expanded={playbackSettingsOpen} title="Playback controls" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Settings2 size={15}/></button><button onClick={() => setCreatePostModalOpen(true)} aria-label="Upload video" title="Upload video" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15"><Upload size={16}/></button>
       </div>
+    {playbackSettingsOpen && <div className="absolute right-3 top-14 z-30 w-[min(19rem,calc(100%-1.5rem))] rounded-2xl border border-white/15 bg-[#17131A]/95 p-3.5 text-white shadow-2xl backdrop-blur-xl">
+      <div className="mb-3 flex items-center justify-between"><div><p className="text-sm font-bold">Playback controls</p><p className="mt-0.5 text-[11px] text-white/65">Choose how Explore moves between videos.</p></div><button onClick={() => setPlaybackSettingsOpen(false)} aria-label="Close playback controls" className="grid h-7 w-7 place-items-center rounded-full bg-white/10"><X size={15}/></button></div>
+      <button onClick={() => { const next = !autoNext; setAutoNext(next); localStorage.setItem('roseone_video_auto_next', String(next)); }} className="flex w-full items-center justify-between gap-3 rounded-xl px-2 py-2 text-left hover:bg-white/5"><span><span className="block text-xs font-semibold">Auto-play next</span><span className="mt-0.5 block text-[10px] text-white/60">Move to the next video when the current one ends.</span></span><span className={"relative h-5 w-9 rounded-full transition-colors " + (autoNext ? "bg-[#E91E8C]" : "bg-white/25")}><span className={"absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform " + (autoNext ? "translate-x-4" : "translate-x-0.5")}/></span></button>
+      <div className="mt-1 rounded-xl px-2 py-2"><p className="text-xs font-semibold">Manual navigation</p><p className="mt-0.5 text-[10px] text-white/60">Previous and Next remain available, so you can always move videos yourself.</p></div>
+      <div className="mt-1 rounded-xl px-2 py-2"><p className="text-xs font-semibold">Video upload limit</p><p className="mt-0.5 text-[10px] text-white/60">GistUpp's intended maximum is 30 minutes per video. Server-side upload enforcement and media storage still need production verification.</p></div>
+    </div>}
       <div className="mt-2 flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 backdrop-blur-sm">
         <Search size={14} className="shrink-0 text-white/70"/><input value={searchQuery} onChange={e => {setSearchQuery(e.target.value);setActiveIndex(0)}} placeholder="Search videos, creators, hashtags" className="min-w-0 flex-1 bg-transparent text-[11px] text-white outline-none placeholder:text-white/60"/>
         {searchQuery && <button onClick={() => setSearchQuery('')} aria-label="Clear search"><X size={14}/></button>}
@@ -71,7 +80,7 @@ export const ExploreView: React.FC = () => {
         </div>
         <div className="flex shrink-0 flex-col items-center gap-3 pb-1">
           <button onClick={() => toggleLikePost(current.id)} className="flex flex-col items-center gap-0.5"><Heart size={22}/><span className="text-[10px]">{current.likesCount}</span></button>
-          <button onClick={() => setCommentOpen(v => !v)} className="flex flex-col items-center gap-0.5"><MessageCircle size={22}/><span className="text-[10px]">{current.commentsCount}</span></button>
+          <button onClick={() => setCommentOpen(v => !v)} aria-label="Open video comments" aria-expanded={commentOpen} className="flex flex-col items-center gap-0.5"><MessageCircle size={22}/><span className="text-[10px]">{current.commentsCount}</span></button>
           <button onClick={() => setReshareModalPost(current)} aria-label="Reshare"><Repeat2 size={21}/></button>
           <button onClick={() => toggleSavePost(current.id)} aria-label="Save video"><Bookmark size={20}/></button>
           <button onClick={shareVideo} aria-label="Share video"><Share2 size={20}/></button>
@@ -85,7 +94,7 @@ export const ExploreView: React.FC = () => {
       <button onClick={nextVideo} disabled={activeIndex>=filtered.length-1} aria-label="Next video" className="grid h-8 w-8 place-items-center rounded-full bg-black/35 disabled:opacity-30"><ChevronDown size={18}/></button>
     </div>
 
-    {commentOpen && current && <div className="absolute inset-x-0 bottom-0 z-20 max-h-[58%] rounded-t-2xl bg-white p-3 text-slate-900 shadow-2xl dark:bg-[#17131A] dark:text-white">
+    {commentOpen && current && <div ref={commentPanelRef} tabIndex={-1} className="absolute inset-x-0 bottom-0 z-40 max-h-[72%] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-slate-200 bg-white p-3 pb-5 text-slate-900 shadow-2xl outline-none dark:border-slate-700 dark:bg-[#17131A] dark:text-white">
       <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold">Comments · {current.commentsCount}</p><button onClick={() => setCommentOpen(false)} aria-label="Close comments"><X size={18}/></button></div>
       <div className="max-h-40 overflow-y-auto text-xs text-slate-500 dark:text-slate-400">{(comments[current.id] || []).length ? (comments[current.id] || []).map((c:any) => <div key={c.id} className="border-b border-slate-100 py-2 dark:border-slate-800"><span className="font-semibold text-slate-800 dark:text-slate-200">{c.author?.name || c.userName || 'Member'}</span><p className="mt-1">{c.content || c.text || ''}</p></div>) : <p className="py-5 text-center">Be the first to comment.</p>}</div>
       <form onSubmit={submitComment} className="mt-2 flex items-center gap-2"><input value={commentText} onChange={e=>setCommentText(e.target.value)} placeholder="Add a comment…" className="min-w-0 flex-1 rounded-full bg-slate-100 px-3 py-2 text-xs outline-none dark:bg-slate-800" /><button disabled={!commentText.trim()} className="grid h-8 w-8 place-items-center rounded-full bg-[#E91E8C] text-white disabled:opacity-40" aria-label="Post comment"><Send size={14}/></button></form>
