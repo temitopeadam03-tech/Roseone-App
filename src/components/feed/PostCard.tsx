@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Heart,
-  Copy,
   MessageCircle,
   Repeat2,
   Bookmark,
@@ -106,28 +105,6 @@ export const PostCard: React.FC<{ post: Post }> = ({ post }) => {
     }
   };
 
-  const handleCopyLink = async () => {
-    const url = getPostUrl();
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const field = document.createElement('textarea');
-        field.value = url;
-        field.style.position = 'fixed';
-        field.style.opacity = '0';
-        document.body.appendChild(field);
-        field.select();
-        const copied = document.execCommand('copy');
-        field.remove();
-        if (!copied) throw new Error('Clipboard permission denied');
-      }
-      await recordShare();
-      showToast('Link Copied', 'success');
-    } catch {
-      showToast('Could not copy the link. Please check browser permissions.', 'error');
-    }
-  };
 
   const handleCommentSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
