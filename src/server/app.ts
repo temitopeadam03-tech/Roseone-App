@@ -684,9 +684,10 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
   });
 
   // --- Posts & Feed ---
-  app.get('/api/posts', (_req: Request, res: Response) => {
+  app.get('/api/posts', (req: Request, res: Response) => {
     try {
-      const posts = storage.getPosts();
+      const authUser = getAuthUser(req);
+      const posts = authUser ? storage.getPostsForUser(authUser.id) : storage.getPosts();
       res.json({ success: true, posts });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
@@ -768,9 +769,9 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
         return;
       }
 
-      const post = storage.setPostReaction(id, userId, reactionType);
-      const userReaction = post.reactions?.[userId];
-      res.json({ success: true, post: { ...post, isLiked: Boolean(userReaction), userReaction } });
+      storage.setPostReaction(id, userId, reactionType);
+      const post = storage.getPostForUser(id, userId);
+      res.json({ success: true, post });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message });
     }
@@ -809,8 +810,9 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
     try {
       const authUser = getAuthUser(req);
       if (!authUser) return res.status(401).json({ success: false, error: 'Authentication required' });
-      const post = storage.toggleRepostPost(req.params.id, authUser.id);
-      res.json({ success: true, post: { ...post, isReposted: (storage as any).db?.repostedPosts?.[authUser.id]?.includes(post.id) } });
+      storage.toggleRepostPost(req.params.id, authUser.id);
+      const post = storage.getPostForUser(req.params.id, authUser.id);
+      res.json({ success: true, post });
     } catch (err: any) {
       res.status(400).json({ success: false, error: err.message || 'Repost could not be saved.' });
     }
