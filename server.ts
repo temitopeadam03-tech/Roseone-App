@@ -11,7 +11,15 @@ async function createServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // In development, mount Vite's middleware
+  // Prevent browsers and installed PWAs from retaining an older app shell
+  // after a new Render deployment. Every app response must revalidate.
+  app.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+
   if (!isProduction) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
@@ -23,10 +31,20 @@ async function createServer() {
     });
     app.use(vite.middlewares);
   } else {
-    // In production, serve the built static assets from dist
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      etag: true,
+      lastModified: true,
+      setHeaders(res) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      },
+    }));
     app.get('*', (_req: Request, res: Response) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
