@@ -119,17 +119,6 @@ const MainContent: React.FC = () => {
     );
   };
 
-  const isWideFullView =
-    activeTab === 'explore' ||
-    activeTab === 'market' ||
-    activeTab === 'live' ||
-    activeView === 'marketplace' ||
-    activeTab === 'messages' ||
-    activeView === 'communities' ||
-    activeView === 'creator-hub' ||
-    activeView === 'settings' ||
-    activeView === 'saved';
-
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#120e14] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors">
       {/* Top Bar (Wordmark, links, notifications, account switcher, CTA, profile) */}
