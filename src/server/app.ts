@@ -948,10 +948,12 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
         res.status(400).json({ success: false, error: 'Sign in and provide a comment or voice note.' });
         return;
       }
-      const author = storage.getUserById(authorId);
-      const post = storage.getPosts().find((item) => item.id === id);
-      if (!author || !post) {
-        res.status(404).json({ success: false, error: 'The post or signed-in account could not be found. Refresh and try again.' });
+      // getAuthUser resolves the account from the validated session. Avoid a
+      // second lookup in the per-instance snapshot, which may be stale on a
+      // different Render instance.
+      const author = authUser;
+      if (!author || !id) {
+        res.status(401).json({ success: false, error: 'Your session could not be verified. Please sign in again.' });
         return;
       }
       if (textContent.length > 5000) {
@@ -997,6 +999,7 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
         if (error) throw error;
       } else {
         storage.addComment(id, authorId, textContent, voiceUrl, comment.voiceDuration, parentCommentId);
+        await storage.flushDurable();
       }
       res.status(201).json({ success: true, comment });
     } catch (err: any) {
