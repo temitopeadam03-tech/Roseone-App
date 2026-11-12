@@ -29,7 +29,7 @@ export const RoseOneSymbol: React.FC<{
     : 'none';
   return (
     <img
-      src="/gistupp-mark.svg?v=20261112-brand4"
+      src="/gistupp-mark.svg?v=20261112-brand5"
       alt="GistUpp"
       width={size}
       height={size}
@@ -64,7 +64,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
   if (variant === 'primary') {
     return (
       <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
-        <img src="/gistupp-logo.svg?v=20261112-brand4" alt="GistUpp" draggable={false} className={`w-56 sm:w-64 h-auto object-contain ${symbolClassName} ${textClassName}`} style={imageStyle} />
+        <img src="/gistupp-logo.svg?v=20261112-brand5" alt="GistUpp" draggable={false} className={`w-56 sm:w-64 h-auto object-contain ${symbolClassName} ${textClassName}`} style={imageStyle} />
         {tagline}
       </div>
     );
@@ -74,7 +74,7 @@ export const RoseOneLogo: React.FC<RoseOneLogoProps> = ({
     <div className={`inline-flex items-center gap-2.5 group select-none ${className}`}>
       <RoseOneSymbol size={iconSize} monochrome={monochrome} monochromeColor={monochromeColor} className={symbolClassName} animated={animated} />
       <span className="flex flex-col items-start gap-1">
-        <img src="/gistupp-wordmark.svg?v=20261112-brand4" alt="GistUpp" draggable={false} className={`w-28 sm:w-32 h-auto object-contain ${textClassName}`} style={imageStyle} />
+        <img src="/gistupp-wordmark.svg?v=20261112-brand5" alt="GistUpp" draggable={false} className={`w-28 sm:w-32 h-auto object-contain ${textClassName}`} style={imageStyle} />
         {tagline}
       </span>
     </div>
