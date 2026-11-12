@@ -25,7 +25,8 @@
     "vite": "^8.3.0",
     "@supabase/supabase-js": "^2.57.0",
     "livekit-server-sdk": "^2.13.3",
-    "livekit-client": "^2.15.6"
+    "livekit-client": "^2.15.6",
+    "ffprobe-static": "^5.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
