@@ -159,26 +159,11 @@ const MainContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Viewport (Screen width >= 1024px): Full-width spacious responsive workspace */}
-        <div className="hidden lg:flex justify-center gap-6 xl:gap-8 items-start w-full max-w-[1520px] mx-auto">
-          {/* Left Navigation Sidebar */}
-          <DesktopSidebar />
-
-          {/* Main Content Workspace */}
-          {isWideFullView ? (
-            /* Expansive full-width view for Marketplace, Messages, Communities, Settings */
-            <div className="flex-1 min-w-0 max-w-6xl xl:max-w-7xl">
-              {renderCurrentView()}
-            </div>
-          ) : (
-            /* 3-Column balanced layout for Home Feed & Explore */
-            <>
-              <div className="flex-1 max-w-[620px] xl:max-w-[660px] shrink-0 min-w-0">
-                {renderCurrentView()}
-              </div>
-              <DesktopRightPanel />
-            </>
-          )}
+        {/* Desktop workspace: every tab uses the full available viewport width */}
+        <div className="hidden lg:block w-full min-w-0">
+          <div className="w-full min-w-0">
+            {renderCurrentView()}
+          </div>
         </div>
       </main>
     </div>
