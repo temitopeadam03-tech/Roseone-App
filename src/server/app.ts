@@ -1,5 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
+import os from 'os';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import ffprobePath from 'ffprobe-static';
 import crypto from 'crypto';
 import fs from 'fs';
 import { storage } from './storage';
@@ -8,6 +12,7 @@ import { AccessToken } from 'livekit-server-sdk';
 
 export function createExpressApp() {
   const app = express();
+const execFileAsync = promisify(execFile);
 
   // Initialize the durable store before handling any request.
   app.use(async (_req: Request, _res: Response, next: NextFunction) => {
@@ -591,6 +596,36 @@ export function createExpressApp() {
       }
 
       const buffer = Buffer.from(base64Data, 'base64');
+      if (mimeType.startsWith('video/')) {
+        if (!ffprobePath) {
+          res.status(503).json({ success: false, error: 'Video duration verification is temporarily unavailable. Please try again later.' });
+          return;
+        }
+        const probeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gistupp-video-'));
+        const probeFile = path.join(probeDir, `upload.${ext}`);
+        try {
+          fs.writeFileSync(probeFile, buffer);
+          const { stdout } = await execFileAsync(ffprobePath, [
+            '-v', 'error', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', probeFile,
+          ], { timeout: 15000, maxBuffer: 1024 * 1024 });
+          const durationSeconds = Number(stdout.trim());
+          if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+            res.status(400).json({ success: false, error: 'Could not verify this video duration. Please upload a valid MP4 or WebM video.' });
+            return;
+          }
+          if (durationSeconds > 30 * 60) {
+            res.status(413).json({ success: false, error: 'Videos must be 30 minutes or shorter.' });
+            return;
+          }
+        } catch (probeError) {
+          console.warn('[media] Video duration probe failed:', probeError);
+          res.status(400).json({ success: false, error: 'Could not verify this video. Please upload a valid MP4 or WebM video.' });
+          return;
+        } finally {
+          try { fs.rmSync(probeDir, { recursive: true, force: true }); } catch {}
+        }
+      }
       const authUser = getAuthUser(req);
       if (!authUser) {
         res.status(401).json({ success: false, error: 'Sign in before uploading media.' });
