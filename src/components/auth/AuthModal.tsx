@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User as UserIcon, AtSign, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { X, Lock, Mail, User as UserIcon, AtSign, ArrowRight, Eye, EyeOff, Sparkles, ShieldCheck, Globe2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { RoseOneSymbol } from '../ui/RoseOneLogo';
 import { useApp } from '../../context/AppContext';
@@ -88,13 +88,30 @@ export const AuthModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-5 bg-[radial-gradient(ellipse_at_top_left,_rgba(242,10,131,0.16),_transparent_42%),linear-gradient(135deg,#fff7fb_0%,#f7f3ff_48%,#fff_100%)] dark:bg-[linear-gradient(135deg,#17101b,#120e18_55%,#1b1018)] animate-in fade-in duration-200"
       onClick={() => { if (isAuthenticated) setIsAuthModalOpen(false); }}
     >
       <div
-        className="w-full max-w-md bg-white dark:bg-[#1a151f] rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="w-full max-w-6xl min-h-[min(760px,calc(100vh-24px))] max-h-[calc(100vh-24px)] grid lg:grid-cols-[1.02fr_0.98fr] bg-white dark:bg-[#17121c] rounded-[30px] shadow-[0_30px_100px_rgba(71,16,48,0.22)] border border-white/80 dark:border-white/10 overflow-hidden animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
+        <section className="relative hidden lg:flex flex-col justify-between overflow-hidden p-10 xl:p-14 text-white bg-[linear-gradient(145deg,#f20a83_0%,#c90068_48%,#76134e_100%)]">
+          <div className="absolute -right-24 -top-24 h-80 w-80 rounded-full border border-white/15" />
+          <div className="absolute -right-8 top-28 h-56 w-56 rounded-full border border-white/10" />
+          <div className="absolute -bottom-36 -left-20 h-96 w-96 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative z-10 flex items-center gap-3"><span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/30"><RoseOneSymbol size={34} animated={false} /></span><div><div className="text-lg font-black">GistUpp</div><div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/70">Your world. Your people.</div></div></div>
+          <div className="relative z-10 my-10 max-w-lg">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-bold"><Sparkles className="h-4 w-4" /> A more connected social experience</div>
+            <h1 className="text-4xl xl:text-5xl font-black leading-[1.08] tracking-tight">Your people.<br/><span className="text-pink-100">Your moments.</span><br/>All in one place.</h1>
+            <p className="mt-6 max-w-md text-sm leading-7 text-white/80">Share what matters, discover fresh ideas, build communities and stay close to your circle—wherever life takes you.</p>
+            <div className="mt-9 grid grid-cols-2 gap-3">
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-4"><Globe2 className="mb-3 h-5 w-5"/><div className="text-sm font-extrabold">One connected space</div><div className="mt-1 text-[11px] text-white/70">People, stories and ideas</div></div>
+              <div className="rounded-2xl border border-white/20 bg-white/10 p-4"><ShieldCheck className="mb-3 h-5 w-5"/><div className="text-sm font-extrabold">Your account, your way</div><div className="mt-1 text-[11px] text-white/70">Personal controls and privacy</div></div>
+            </div>
+          </div>
+          <div className="relative z-10 flex items-center justify-between text-[11px] font-semibold text-white/65"><span>Made for every screen</span><span>GistUpp Network</span></div>
+        </section>
+        <div className="min-w-0 max-h-[calc(100vh-24px)] overflow-y-auto">
         {/* Header */}
         <div className="relative p-6 pb-4 bg-gradient-to-b from-[#FCE7F3]/40 dark:from-[#E91E8C]/10 to-transparent">
           {isAuthenticated && <button
@@ -105,7 +122,7 @@ export const AuthModal: React.FC = () => {
             <X className="w-5 h-5" />
           </button>}
 
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 lg:hidden">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white dark:bg-[#251f2c] ring-1 ring-pink-100 dark:ring-pink-900/40">
               <RoseOneSymbol size={28} animated={false} />
             </span>
@@ -114,17 +131,17 @@ export const AuthModal: React.FC = () => {
             </span>
           </div>
 
-          <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             {mode === 'login' ? 'Sign in to Gistupp' : 'Join the Gistupp network'}
           </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
             {mode === 'login'
               ? 'Connect, share, and express yourself across all your devices.'
               : 'Create your account to start sharing posts, stories, and voice notes.'}
           </p>
 
           {/* Mode Tabs */}
-          <div className="flex p-1 mt-4 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
+          <div className="flex p-1 mt-5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl">
             <button
               onClick={() => {
                 setMode('login');
@@ -155,7 +172,7 @@ export const AuthModal: React.FC = () => {
         </div>
 
         {/* Form Body */}
-        <div className="p-6 pt-2">
+        <div className="px-6 pb-7 pt-2 sm:px-8 lg:px-10">
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-2">
               <span>{error}</span>
@@ -318,7 +335,7 @@ export const AuthModal: React.FC = () => {
             </form>
           )}
 
-          {mode === 'login' && (
+          {!resetMode && (
             <div className="mt-4">
               <div className="relative my-4"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-700" /></div><div className="relative flex justify-center"><span className="px-3 bg-white dark:bg-[#1a151f] text-[10px] uppercase tracking-wider text-slate-400">or continue with</span></div></div>
               <button type="button" onClick={handleGoogleSignIn} disabled={isLoading} className="w-full py-3 border border-slate-200 dark:border-slate-700 hover:border-[#E91E8C] rounded-2xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-2 disabled:opacity-50">
@@ -340,6 +357,7 @@ export const AuthModal: React.FC = () => {
               {supabaseMessage && <p className="mt-3 text-xs text-emerald-600">{supabaseMessage}</p>}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
