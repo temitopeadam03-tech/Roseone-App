@@ -13,6 +13,7 @@ import { AccessToken } from 'livekit-server-sdk';
 export function createExpressApp() {
   const app = express();
 const execFileAsync = promisify(execFile);
+const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffprobePath as unknown as { path?: string }).path;
 
   // Initialize the durable store before handling any request.
   app.use(async (_req: Request, _res: Response, next: NextFunction) => {
@@ -597,7 +598,7 @@ const execFileAsync = promisify(execFile);
 
       const buffer = Buffer.from(base64Data, 'base64');
       if (mimeType.startsWith('video/')) {
-        if (!ffprobePath) {
+        if (!ffprobeExecutable) {
           res.status(503).json({ success: false, error: 'Video duration verification is temporarily unavailable. Please try again later.' });
           return;
         }
@@ -605,7 +606,7 @@ const execFileAsync = promisify(execFile);
         const probeFile = path.join(probeDir, `upload.${ext}`);
         try {
           fs.writeFileSync(probeFile, buffer);
-          const { stdout } = await execFileAsync(ffprobePath, [
+          const { stdout } = await execFileAsync(ffprobeExecutable, [
             '-v', 'error', '-show_entries', 'format=duration',
             '-of', 'default=noprint_wrappers=1:nokey=1', probeFile,
           ], { timeout: 15000, maxBuffer: 1024 * 1024 });
