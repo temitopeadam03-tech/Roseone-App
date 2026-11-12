@@ -3,8 +3,6 @@ import { useApp, AppProvider } from './context/AppContext';
 import { TopHeader } from './components/layout/TopHeader';
 import { AndroidBottomTabs } from './components/layout/AndroidBottomTabs';
 import { AndroidDrawerMenu } from './components/layout/AndroidDrawerMenu';
-import { DesktopSidebar } from './components/layout/DesktopSidebar';
-import { DesktopRightPanel } from './components/layout/DesktopRightPanel';
 import { FeedView } from './components/feed/FeedView';
 import { ExploreView } from './components/explore/ExploreView';
 import { LiveView } from './components/live/LiveView';
@@ -164,7 +162,7 @@ const MainContent: React.FC = () => {
       {/* Fully-Responsive Main Container */}
       <main className="flex-1 w-full mx-auto px-0 py-0">
         {/* Mobile & Tablet Viewport (Screen width < 1024px): Naturally responsive layout */}
-        <div className={`block lg:hidden mx-auto pb-14 w-full transition-all ${isWideFullView ? 'max-w-none' : 'max-w-none'}`}>
+        <div className="block lg:hidden mx-auto pb-14 w-full max-w-none transition-all">
           {renderCurrentView()}
 
           {/* Fixed Bottom Navigation Tabs for mobile & tablet */}
@@ -175,26 +173,11 @@ const MainContent: React.FC = () => {
           </div>
         </div>
 
-        {/* Desktop Viewport (Screen width >= 1024px): Full-width spacious responsive workspace */}
-        <div className="hidden lg:flex justify-center gap-2 items-start w-full max-w-none mx-auto">
-          {/* Left Navigation Sidebar */}
-          <DesktopSidebar />
-
-          {/* Main Content Workspace */}
-          {isWideFullView ? (
-            /* Expansive full-width view for Marketplace, Messages, Communities, Settings */
-            <div className="flex-1 min-w-0 max-w-none">
-              {renderCurrentView()}
-            </div>
-          ) : (
-            /* 3-Column balanced layout for Home Feed & Explore */
-            <>
-              <div className="flex-1 max-w-[760px] 2xl:max-w-[820px] shrink-0 min-w-0">
-                {renderCurrentView()}
-              </div>
-              <DesktopRightPanel />
-            </>
-          )}
+        {/* Desktop: full-bleed workspace on every tab; no persistent left or right side columns */}
+        <div className="hidden lg:block w-full min-w-0">
+          <div className="w-full min-w-0">
+            {renderCurrentView()}
+          </div>
         </div>
       </main>
     </div>
