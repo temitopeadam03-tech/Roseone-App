@@ -2436,6 +2436,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setAllUsers(prev => [...prev.filter(item => item.id !== user.id), user]);
       setIsAuthenticated(true);
       setIsAuthModalOpen(false);
+      void refreshData();
     };
     void supabase.auth.getSession().then(({ data }) => {
       if (data.session) applySupabaseSession(data.session);
