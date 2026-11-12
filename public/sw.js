@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gistupp-shell-v3-network-first';
+const CACHE_NAME = 'gistupp-shell-v4-network-first';
 const APP_SHELL = ['/', '/site.webmanifest', '/favicon.svg', '/gistupp-logo.svg'];
 
 self.addEventListener('install', (event) => {
