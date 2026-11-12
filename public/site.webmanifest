@@ -10,13 +10,13 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/favicon.svg?v=20261112-brand4",
+      "src": "/favicon.svg?v=20261112-brand5",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/favicon.svg?v=20261112-brand4",
+      "src": "/favicon.svg?v=20261112-brand5",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable"
