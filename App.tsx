@@ -145,7 +145,7 @@ const MainContent: React.FC = () => {
       <ToastNotification />
 
       {/* Fully-Responsive Main Container */}
-      <main className="flex-1 w-full mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4">
+      <main className="flex-1 w-full min-w-0 mx-auto px-0 py-0">
         {/* Mobile & Tablet Viewport (Screen width < 1024px): Naturally responsive layout */}
         <div className={`block lg:hidden mx-auto pb-24 w-full transition-all ${isWideFullView ? 'max-w-4xl' : 'max-w-2xl'}`}>
           {renderCurrentView()}
