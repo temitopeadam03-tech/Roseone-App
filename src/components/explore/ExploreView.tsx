@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Compass, Users, TrendingUp, Heart, MessageCircle, Repeat2, Bookmark, Share2, Upload, X, ChevronUp, ChevronDown, Send, Volume2, VolumeX, UserPlus, UserCheck, Settings2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Avatar } from '../ui/Avatar';
@@ -100,10 +101,16 @@ export const ExploreView: React.FC = () => {
       <button onClick={nextVideo} disabled={activeIndex>=filtered.length-1} aria-label="Next video" className="grid h-8 w-8 place-items-center rounded-full bg-black/35 disabled:opacity-30"><ChevronDown size={18}/></button>
     </div>
 
-    {commentOpen && current && <div ref={commentPanelRef} tabIndex={-1} className="fixed inset-x-0 bottom-14 z-[60] max-h-[72dvh] overflow-y-auto overscroll-contain rounded-t-2xl border-t border-slate-200 bg-white p-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl outline-none dark:border-slate-700 dark:bg-[#17131A] dark:text-white lg:absolute lg:bottom-3 lg:inset-x-3 lg:max-h-[72%] lg:rounded-2xl">
-      <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold">Comments · {current.commentsCount}</p><button onClick={() => setCommentOpen(false)} aria-label="Close comments"><X size={18}/></button></div>
-      <div className="max-h-40 overflow-y-auto text-xs text-slate-500 dark:text-slate-400">{(comments[current.id] || []).length ? (comments[current.id] || []).map((c:any) => <div key={c.id} className="border-b border-slate-100 py-2 dark:border-slate-800"><span className="font-semibold text-slate-800 dark:text-slate-200">{c.author?.name || c.userName || 'Member'}</span><p className="mt-1">{c.content || c.text || ''}</p></div>) : <p className="py-5 text-center">Be the first to comment.</p>}</div>
-      <form onSubmit={submitComment} className="mt-2 flex items-center gap-2"><input value={commentText} onChange={e=>setCommentText(e.target.value)} placeholder="Add a comment…" className="min-w-0 flex-1 rounded-full bg-slate-100 px-3 py-2 text-xs outline-none dark:bg-slate-800" /><button type="submit" disabled={!commentText.trim() || commentSubmitting} className="grid h-8 w-8 place-items-center rounded-full bg-[#E91E8C] text-white disabled:opacity-40" aria-label={commentSubmitting ? 'Posting comment' : 'Post comment'}><Send size={14}/></button></form>
-    </div>}
+    {commentOpen && current && createPortal(
+      <>
+        <button type="button" aria-label="Close video comments" onClick={() => setCommentOpen(false)} className="fixed inset-0 z-[100] bg-black/45" />
+        <div ref={commentPanelRef} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Video comments" className="fixed inset-x-0 bottom-14 z-[101] mx-auto max-h-[72dvh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-t-2xl border-t border-slate-200 bg-white p-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] text-slate-900 shadow-2xl outline-none dark:border-slate-700 dark:bg-[#17131A] dark:text-white lg:inset-x-auto lg:bottom-6 lg:right-6 lg:mx-0 lg:w-[min(28rem,calc(100vw-3rem))] lg:max-h-[75dvh] lg:rounded-2xl">
+          <div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold">Comments · {current.commentsCount}</p><button onClick={() => setCommentOpen(false)} aria-label="Close comments"><X size={18}/></button></div>
+          <div className="max-h-56 overflow-y-auto text-xs text-slate-500 dark:text-slate-400">{(comments[current.id] || []).length ? (comments[current.id] || []).map((c:any) => <div key={c.id} className="border-b border-slate-100 py-2 dark:border-slate-800"><span className="font-semibold text-slate-800 dark:text-slate-200">{c.author?.name || c.userName || 'Member'}</span><p className="mt-1">{c.content || c.text || ''}</p></div>) : <p className="py-5 text-center">Be the first to comment.</p>}</div>
+          <form onSubmit={submitComment} className="mt-2 flex items-center gap-2"><input value={commentText} onChange={e=>setCommentText(e.target.value)} placeholder="Add a comment…" className="min-w-0 flex-1 rounded-full bg-slate-100 px-3 py-2 text-xs outline-none dark:bg-slate-800" /><button type="submit" disabled={!commentText.trim() || commentSubmitting} className="grid h-8 w-8 place-items-center rounded-full bg-[#E91E8C] text-white disabled:opacity-40" aria-label={commentSubmitting ? 'Posting comment' : 'Post comment'}><Send size={14}/></button></form>
+        </div>
+      </>,
+      document.body
+    )}
   </section>;
 };
