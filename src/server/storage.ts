@@ -648,6 +648,24 @@ export class PersistentStorage {
     return this.db.posts;
   }
 
+  // Return engagement flags scoped to the requesting account. These flags must
+  // never be stored on the shared post record because multiple users view it.
+  public getPostForUser(postId: string, userId: string): Post | undefined {
+    const post = this.db.posts.find((item) => item.id === postId);
+    if (!post) return undefined;
+    return {
+      ...post,
+      isSaved: (this.db.savedPosts?.[userId] || []).includes(postId),
+      isReposted: (this.db.repostedPosts?.[userId] || []).includes(postId),
+      isLiked: Boolean(post.reactions?.[userId]),
+      userReaction: post.reactions?.[userId],
+    };
+  }
+
+  public getPostsForUser(userId: string): Post[] {
+    return this.db.posts.map((post) => this.getPostForUser(post.id, userId) || post);
+  }
+
   public createPost(authorId: string, content: string, media?: string[], pollData?: { question: string; options: string[] }, tags?: string[], communityId?: string): Post {
     const author = this.getUserById(authorId);
     if (!author) throw new Error('Author not found');
@@ -782,11 +800,8 @@ export class PersistentStorage {
       this.db.savedPosts[userId].push(postId);
     }
 
-    const post = this.db.posts.find((p) => p.id === postId);
-    if (post) {
-      post.isSaved = !isSaved;
-    }
-
+    // Saved state is per-user and is projected by getPostForUser().
+    // Do not mutate the shared post record with one account's saved flag.
     this.schedulePersist();
     return !isSaved;
   }
