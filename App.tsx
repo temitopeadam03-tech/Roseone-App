@@ -106,6 +106,7 @@ const MainContent: React.FC = () => {
   };
 
   const isWideFullView =
+    activeTab === 'explore' ||
     activeTab === 'market' ||
     activeView === 'marketplace' ||
     activeTab === 'messages' ||
