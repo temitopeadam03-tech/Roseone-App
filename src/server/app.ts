@@ -42,7 +42,7 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
     // Comment reads/writes use their own durable Supabase table and must not
     // wait for the global JSON snapshot lease.
     const isDedicatedCommentRequest =
-      /^\\/api\\/posts\\/[^/]+\\/comments(?:\\/[^/]+)?$/.test(req.path) &&
+      /^\/api\/posts\/[^/]+\/comments(?:\/[^/]+)?$/.test(req.path) &&
       (req.method === 'GET' || req.method === 'POST');
     if (!isApiRequest || req.method === 'OPTIONS' || isDedicatedCommentRequest) {
       next();
@@ -89,7 +89,7 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
   // This closes the previous 150ms window in which a restart could lose a post/message.
   app.use((req: Request, res: Response, next: NextFunction) => {
     const isDedicatedCommentRequest =
-      /^\\/api\\/posts\\/[^/]+\\/comments(?:\\/[^/]+)?$/.test(req.path) &&
+      /^\/api\/posts\/[^/]+\/comments(?:\/[^/]+)?$/.test(req.path) &&
       (req.method === 'GET' || req.method === 'POST');
     if (isDedicatedCommentRequest) {
       next();
