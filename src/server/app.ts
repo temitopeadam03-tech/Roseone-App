@@ -39,7 +39,12 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
       req.path === '/api' ||
       req.path.startsWith('/api/') ||
       req.path.startsWith('/.netlify/functions/api');
-    if (!isApiRequest || req.method === 'OPTIONS') {
+    // Comment reads/writes use their own durable Supabase table and must not
+    // wait for the global JSON snapshot lease.
+    const isDedicatedCommentRequest =
+      /^\\/api\\/posts\\/[^/]+\\/comments(?:\\/[^/]+)?$/.test(req.path) &&
+      (req.method === 'GET' || req.method === 'POST');
+    if (!isApiRequest || req.method === 'OPTIONS' || isDedicatedCommentRequest) {
       next();
       return;
     }
@@ -82,7 +87,14 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
 
   // Do not acknowledge a write until the shared Supabase snapshot is durable.
   // This closes the previous 150ms window in which a restart could lose a post/message.
-  app.use((_req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const isDedicatedCommentRequest =
+      /^\\/api\\/posts\\/[^/]+\\/comments(?:\\/[^/]+)?$/.test(req.path) &&
+      (req.method === 'GET' || req.method === 'POST');
+    if (isDedicatedCommentRequest) {
+      next();
+      return;
+    }
     const originalEnd = res.end.bind(res);
     let endStarted = false;
     (res as any).end = (...args: any[]) => {
@@ -522,6 +534,48 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
       }
       const userId = authUser.id;
       const data = storage.getBootstrapData(userId);
+      // Merge independently persisted comments so they load across devices without
+      // relying on the contended shared JSON snapshot.
+      if (liveDb) {
+        const { data: durableCommentRows, error: commentsError } = await liveDb
+          .from('gistupp_app_comments')
+          .select('payload, post_id, parent_comment_id, created_at')
+          .order('created_at', { ascending: true })
+          .limit(10000);
+        if (commentsError) throw commentsError;
+        const durableByPost: Record<string, any[]> = {};
+        for (const row of durableCommentRows || []) {
+          const item = row.payload;
+          if (!item?.id || !row.post_id) continue;
+          if (!durableByPost[row.post_id]) durableByPost[row.post_id] = [];
+          durableByPost[row.post_id].push(item);
+        }
+        for (const [postId, durableItems] of Object.entries(durableByPost)) {
+          const merged = [...(data.comments[postId] || [])];
+          const known = new Set(merged.map((item: any) => item.id));
+          const pending = durableItems.filter((item: any) => !known.has(item.id));
+          const byId = new Map<string, any>();
+          for (const item of [...merged, ...pending]) byId.set(item.id, item);
+          const roots = [...merged];
+          for (const item of pending) {
+            if (item.parentCommentId) {
+              const parent = byId.get(item.parentCommentId);
+              if (parent) parent.replies = [...(parent.replies || []), item];
+              else roots.push(item);
+            } else {
+              roots.push(item);
+            }
+          }
+          data.comments[postId] = roots;
+        }
+        for (const post of data.posts) {
+          const list = data.comments[post.id] || [];
+          const countTree = (items: any[]): number => items.reduce((sum, item) => sum + 1 + countTree(item.replies || []), 0);
+          const durableCount = durableByPost[post.id]?.length || 0;
+          const legacyCount = countTree((storage.getBootstrapData(userId).comments[post.id] || []));
+          post.commentsCount = Math.max(post.commentsCount || 0, legacyCount + durableCount);
+        }
+      }
       // Supabase is the shared source of truth for cross-device Stories and Marketplace listings.
       if (liveDb) {
         const [{ data: sharedStories, error: storiesError }, { data: sharedListings, error: listingsError }] = await Promise.all([
@@ -849,38 +903,105 @@ const ffprobeExecutable = typeof ffprobePath === 'string' ? ffprobePath : (ffpro
   });
 
   // --- Comments & Replies ---
-  app.get('/api/posts/:id/comments', (req: Request, res: Response) => {
+  app.get('/api/posts/:id/comments', async (req: Request, res: Response) => {
     try {
-      const comments = storage.getComments(req.params.id);
-      res.json({ success: true, comments });
+      const postId = req.params.id;
+      const legacy = storage.getComments(postId);
+      if (!liveDb) {
+        res.json({ success: true, comments: legacy });
+        return;
+      }
+      const { data: rows, error } = await liveDb
+        .from('gistupp_app_comments')
+        .select('payload, parent_comment_id, created_at')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true })
+        .limit(2000);
+      if (error) throw error;
+      const merged = [...legacy];
+      const known = new Set(merged.map((item: any) => item.id));
+      const pending = (rows || []).map((row: any) => row.payload).filter((item: any) => item?.id && !known.has(item.id));
+      const byId = new Map<string, any>();
+      for (const item of [...merged, ...pending]) byId.set(item.id, item);
+      for (const item of pending) {
+        if (item.parentCommentId) {
+          const parent = byId.get(item.parentCommentId);
+          if (parent) parent.replies = [...(parent.replies || []), item];
+          else merged.push(item);
+        } else merged.push(item);
+      }
+      res.json({ success: true, comments: merged });
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      console.error('[comments] Read failed:', err);
+      res.status(500).json({ success: false, error: 'Comments could not be loaded. Please retry.' });
     }
   });
 
-  app.post('/api/posts/:id/comments', (req: Request, res: Response) => {
+  app.post('/api/posts/:id/comments', async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const authUser = getAuthUser(req);
       const { content, voiceUrl, voiceDuration, parentCommentId } = req.body;
       const authorId = authUser?.id;
-
-      if (!authorId || (!content && !voiceUrl)) {
-        res.status(400).json({ success: false, error: 'authorId and content or voiceUrl required' });
+      const textContent = String(content || '').trim();
+      if (!authorId || (!textContent && !voiceUrl)) {
+        res.status(400).json({ success: false, error: 'Sign in and provide a comment or voice note.' });
         return;
       }
-
-      const comment = storage.addComment(
-        id,
-        authorId,
-        content || '',
+      const author = storage.getUserById(authorId);
+      const post = storage.getPosts().find((item) => item.id === id);
+      if (!author || !post) {
+        res.status(404).json({ success: false, error: 'The post or signed-in account could not be found. Refresh and try again.' });
+        return;
+      }
+      if (textContent.length > 5000) {
+        res.status(400).json({ success: false, error: 'Comments must be 5,000 characters or fewer.' });
+        return;
+      }
+      if (parentCommentId && liveDb) {
+        const [{ data: parentRows, error: parentError }] = await Promise.all([
+          liveDb.from('gistupp_app_comments').select('id').eq('id', parentCommentId).eq('post_id', id).limit(1),
+        ]);
+        if (parentError) throw parentError;
+        const legacyParent = storage.getComments(id).some((item: any) => item.id === parentCommentId || item.replies?.some((reply: any) => reply.id === parentCommentId));
+        if (!parentRows?.length && !legacyParent) {
+          res.status(404).json({ success: false, error: 'The comment you are replying to could not be found. Refresh and try again.' });
+          return;
+        }
+      }
+      const now = Date.now();
+      const comment = {
+        id: `comm_${crypto.randomUUID()}`,
+        postId: id,
+        author,
+        content: textContent,
         voiceUrl,
-        voiceDuration,
-        parentCommentId
-      );
+        voiceDuration: voiceDuration ? Math.min(120, Math.max(1, Math.round(Number(voiceDuration)))) : undefined,
+        createdAt: 'Just now',
+        createdTimestamp: now,
+        likesCount: 0,
+        isLiked: false,
+        likedBy: [],
+        parentCommentId,
+        replies: [],
+      };
+      if (liveDb) {
+        const { error } = await liveDb.from('gistupp_app_comments').insert({
+          id: comment.id,
+          post_id: id,
+          author_id: authorId,
+          parent_comment_id: parentCommentId || null,
+          payload: comment,
+          created_at: new Date(now).toISOString(),
+        });
+        if (error) throw error;
+      } else {
+        storage.addComment(id, authorId, textContent, voiceUrl, comment.voiceDuration, parentCommentId);
+      }
       res.status(201).json({ success: true, comment });
     } catch (err: any) {
-      res.status(400).json({ success: false, error: err.message });
+      console.error('[comments] Save failed:', err);
+      res.status(503).json({ success: false, error: err.message || 'Comment could not be saved. Please retry.' });
     }
   });
 
